@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import '../../config/y_file_list_config.dart';
-import '../../model/y_file_item.dart';
+import '../models/y_file_item.dart';
+import '../models/y_file_list_ui_config.dart';
 
 /// 纵向列表单元格默认实现
 ///
 /// 布局：左侧缩略图（或类型色块）+ 右侧文件名/副标题 + 可选右侧 Checkbox
 class YFileListItem<T extends YFileItem> extends StatelessWidget {
   final T item;
-  final YFileListConfig config;
+  final YFileListUIConfig config;
 
   /// 是否选中（多选模式）
   final bool selected;
@@ -27,7 +27,7 @@ class YFileListItem<T extends YFileItem> extends StatelessWidget {
   const YFileListItem({
     super.key,
     required this.item,
-    this.config = const YFileListConfig(),
+    this.config = const YFileListUIConfig(),
     this.selected = false,
     this.onTap,
     this.onLongPress,

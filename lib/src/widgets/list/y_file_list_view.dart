@@ -1,6 +1,5 @@
 import 'package:flutter/widgets.dart';
 import '../../config/y_file_list_config.dart';
-import '../../model/y_file_item.dart';
 import '../../delegate/y_file_item_builder.dart';
 import 'sliver_y_file_list_view.dart';
 
@@ -16,15 +15,11 @@ import 'sliver_y_file_list_view.dart';
 ///   onTap: (file, i) => print(file.name),
 /// )
 /// ```
-class YFileListView<T extends YFileItem> extends StatelessWidget {
+class YFileListView<T> extends StatelessWidget {
   final List<T> items;
   final YFileListConfig config;
-  final YFileListItemBuilder<T>? itemBuilder;
+  final YFileListItemBuilder<T> itemBuilder;
   final YFileListSeparatorBuilder? separatorBuilder;
-  final YFileItemTapCallback<T>? onTap;
-  final YFileItemLongPressCallback<T>? onLongPress;
-  final YFileItemSelectCallback<T>? onSelect;
-  final Set<String>? selectedIds;
   final ScrollController? controller;
   final bool reverse;
   final ScrollPhysics? physics;
@@ -33,13 +28,9 @@ class YFileListView<T extends YFileItem> extends StatelessWidget {
   const YFileListView({
     super.key,
     required this.items,
+    required this.itemBuilder,
     this.config = const YFileListConfig(),
-    this.itemBuilder,
     this.separatorBuilder,
-    this.onTap,
-    this.onLongPress,
-    this.onSelect,
-    this.selectedIds,
     this.controller,
     this.reverse = false,
     this.physics,
@@ -56,13 +47,9 @@ class YFileListView<T extends YFileItem> extends StatelessWidget {
       slivers: [
         buildSliverYFileListView<T>(
           items: items,
-          config: config,
           itemBuilder: itemBuilder,
+          config: config,
           separatorBuilder: separatorBuilder,
-          onTap: onTap,
-          onLongPress: onLongPress,
-          onSelect: onSelect,
-          selectedIds: selectedIds,
         ),
       ],
     );

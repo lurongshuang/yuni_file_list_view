@@ -44,19 +44,4 @@ void main() {
     });
   });
 
-  group('YFileItem', () {
-    test('copyWith 正确覆写字段', () {
-      const item = YFileItem(id: '1', name: 'test.jpg', type: YFileType.image);
-      final copied = item.copyWith(name: 'new.jpg');
-      expect(copied.id, '1');
-      expect(copied.name, 'new.jpg');
-      expect(copied.type, YFileType.image);
-    });
-
-    test('相同 id 的 item 相等', () {
-      const a = YFileItem(id: 'x', name: 'a.jpg');
-      const b = YFileItem(id: 'x', name: 'b.jpg');
-      expect(a == b, true);
-    });
-  });
 }

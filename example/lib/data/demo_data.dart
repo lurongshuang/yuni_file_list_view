@@ -1,8 +1,9 @@
 import 'package:yuni_file_list_view/yuni_file_list_view.dart';
+import '../models/y_file_item.dart';
 
 /// 模拟数据中心
 class DemoData {
-  static final List<YFileItem> gridItems = List.generate(120, (i) {
+  static final List<YFileItem> gridItems = List.generate(1120, (i) {
     final types = [YFileType.image, YFileType.video];
     final type = types[i % types.length];
     // 分散在过去三年的不同月份

@@ -1,5 +1,4 @@
 import 'package:flutter/widgets.dart';
-import '../model/y_file_item.dart';
 import '../model/y_file_group.dart';
 
 // ─────────────────────── 宫格 Builder ──────────────────────────────
@@ -9,7 +8,7 @@ import '../model/y_file_group.dart';
 /// - [context]：当前 BuildContext
 /// - [item]：当前文件数据
 /// - [index]：在列表中的索引
-typedef YFileGridItemBuilder<T extends YFileItem> = Widget Function(
+typedef YFileGridItemBuilder<T> = Widget Function(
   BuildContext context,
   T item,
   int index,
@@ -18,7 +17,7 @@ typedef YFileGridItemBuilder<T extends YFileItem> = Widget Function(
 // ─────────────────────── 纵向列表 Builder ──────────────────────────
 
 /// 纵向列表单元格自定义构建器
-typedef YFileListItemBuilder<T extends YFileItem> = Widget Function(
+typedef YFileListItemBuilder<T> = Widget Function(
   BuildContext context,
   T item,
   int index,
@@ -36,14 +35,14 @@ typedef YFileListSeparatorBuilder = Widget Function(
 ///
 /// - [group]：当前分组数据
 /// - [groupIndex]：分组在列表中的索引
-typedef YFileGroupHeaderBuilder<T extends YFileItem> = Widget Function(
+typedef YFileGroupHeaderBuilder<T> = Widget Function(
   BuildContext context,
   YFileGroup<T> group,
   int groupIndex,
 );
 
 /// 分组内单元格自定义构建器（优先级高于 [YFileGridItemBuilder]）
-typedef YFileGroupItemBuilder<T extends YFileItem> = Widget Function(
+typedef YFileGroupItemBuilder<T> = Widget Function(
   BuildContext context,
   YFileGroup<T> group,
   T item,
@@ -51,13 +50,3 @@ typedef YFileGroupItemBuilder<T extends YFileItem> = Widget Function(
   int itemIndex,
 );
 
-// ─────────────────────── 通用回调 ──────────────────────────────────
-
-/// 文件点击回调
-typedef YFileItemTapCallback<T extends YFileItem> = void Function(T item, int index);
-
-/// 文件长按回调
-typedef YFileItemLongPressCallback<T extends YFileItem> = void Function(T item, int index);
-
-/// 文件选中状态切换回调（用于多选模式）
-typedef YFileItemSelectCallback<T extends YFileItem> = void Function(T item, bool selected);

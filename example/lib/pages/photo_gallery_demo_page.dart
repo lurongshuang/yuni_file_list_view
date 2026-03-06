@@ -1,6 +1,10 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:yuni_file_list_view/yuni_file_list_view.dart';
+import '../models/y_file_item.dart';
+import '../widgets/y_file_list_item.dart';
+import '../widgets/y_file_grid_item.dart';
+import '../models/y_file_list_ui_config.dart';
 import '../data/demo_data.dart';
 
 class PhotoGalleryDemoPage extends StatefulWidget {
@@ -143,9 +147,6 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
                   groups: groups,
                   config: YFileGroupedConfig(
                     mode: _mode,
-                    pinnedHeader: true,
-                    headerBackgroundColor: Colors.white.withValues(alpha: 0.94),
-                    headerHeight: 46, // 稍微压缩高度，更精致
                     gridConfig: YFileGridConfig(
                       crossAxisCount: crossAxisCount,
                       crossAxisSpacing: 1.0,
@@ -153,8 +154,6 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
                       padding: EdgeInsets.zero, 
                     ),
                     listConfig: const YFileListConfig(
-                      showDivider: true,
-                      dividerIndent: 76,
                       padding: EdgeInsets.zero,
                     ),
                   ),
@@ -174,8 +173,23 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
                       ),
                     );
                   },
-                  selectedIds: _selectedIds,
-                  onTap: (item, index) => _toggleSelection(item.id),
+                  itemBuilder: (context, group, item, groupIndex, itemIndex) {
+                    final isSelected = _selectedIds.contains(item.id);
+                    if (_mode == YFileGroupedMode.grid) {
+                      return YFileGridItem(
+                        item: item,
+                        selected: isSelected,
+                        onTap: () => _toggleSelection(item.id),
+                      );
+                    } else {
+                      return YFileListItem(
+                        item: item,
+                        config: const YFileListUIConfig(showDivider: true, dividerIndent: 76),
+                        selected: isSelected,
+                        onTap: () => _toggleSelection(item.id),
+                      );
+                    }
+                  },
                 ),
 
                 // 底部安全留白

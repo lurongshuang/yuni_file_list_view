@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:yuni_file_list_view/yuni_file_list_view.dart';
+import '../models/y_file_item.dart';
+import '../widgets/y_file_grid_item.dart';
 import '../data/demo_data.dart';
 
 class GroupedDemoPage extends StatelessWidget {
@@ -17,15 +19,18 @@ class GroupedDemoPage extends StatelessWidget {
             crossAxisSpacing: 2,
             mainAxisSpacing: 2,
           ),
-          headerHeight: 46,
-          pinnedHeader: true, // 核心属性：Header 粘性吸顶
-          headerBackgroundColor: Colors.grey.shade100,
         ),
-        onTap: (item, i) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('查看图片：${item.name}'), duration: const Duration(seconds: 1)),
-          );
-        },
+        headerBuilder: (context, group, index) => Container(
+          height: 46,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          alignment: Alignment.centerLeft,
+          color: Colors.grey.shade100,
+          child: Text(group.groupTitle, style: const TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        itemBuilder: (context, group, item, gi, index) => YFileGridItem(
+          item: item,
+          onTap: () {},
+        ),
       ),
     );
   }

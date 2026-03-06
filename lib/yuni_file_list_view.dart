@@ -9,7 +9,6 @@
 library yuni_file_list_view;
 
 // ─── 数据模型 ────────────────────────────────────────────────────────────────
-export 'src/model/y_file_item.dart';
 export 'src/model/y_file_group.dart';
 
 // ─── 配置 ────────────────────────────────────────────────────────────────────
@@ -24,16 +23,13 @@ export 'src/delegate/y_file_item_builder.dart';
 export 'src/utils/y_grid_column_calculator.dart';
 
 // ─── 宫格列表 ─────────────────────────────────────────────────────────────────
-export 'src/widgets/grid/y_file_grid_item.dart';
 export 'src/widgets/grid/sliver_y_file_grid_view.dart';
 export 'src/widgets/grid/y_file_grid_view.dart';
 
 // ─── 纵向列表 ─────────────────────────────────────────────────────────────────
-export 'src/widgets/list/y_file_list_item.dart';
 export 'src/widgets/list/sliver_y_file_list_view.dart';
 export 'src/widgets/list/y_file_list_view.dart';
 
 // ─── 分组列表 ─────────────────────────────────────────────────────────────────
-export 'src/widgets/grouped/y_file_group_header.dart';
 export 'src/widgets/grouped/sliver_y_file_grouped_list_view.dart';
 export 'src/widgets/grouped/y_file_grouped_list_view.dart';

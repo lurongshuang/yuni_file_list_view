@@ -1,4 +1,3 @@
-import 'y_file_item.dart';
 
 /// 文件分组数据模型
 ///
@@ -13,7 +12,7 @@ import 'y_file_item.dart';
 ///   ),
 /// ];
 /// ```
-class YFileGroup<T extends YFileItem> {
+class YFileGroup<T> {
   /// 分组唯一标识
   final String groupId;
 

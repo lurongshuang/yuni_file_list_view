@@ -1,21 +1,16 @@
 import 'package:flutter/material.dart';
 import '../../config/y_file_list_config.dart';
-import '../../model/y_file_item.dart';
 import '../../delegate/y_file_item_builder.dart';
-import 'y_file_list_item.dart';
+
 
 /// 构建纵向列表的 Sliver 组件
 /// 直接返回原生 [SliverPadding] 封装的 [SliverList]
-SliverPadding buildSliverYFileListView<T extends YFileItem>({
+SliverPadding buildSliverYFileListView<T>({
   Key? key,
   required List<T> items,
+  required YFileListItemBuilder<T> itemBuilder,
   YFileListConfig config = const YFileListConfig(),
-  YFileListItemBuilder<T>? itemBuilder,
   YFileListSeparatorBuilder? separatorBuilder,
-  YFileItemTapCallback<T>? onTap,
-  YFileItemLongPressCallback<T>? onLongPress,
-  YFileItemSelectCallback<T>? onSelect,
-  Set<String>? selectedIds,
 }) {
   return SliverPadding(
     key: key,
@@ -29,30 +24,11 @@ SliverPadding buildSliverYFileListView<T extends YFileItem>({
             if (separatorBuilder != null) {
               return separatorBuilder(context, itemIndex);
             }
-            if (!config.showDivider) return const SizedBox.shrink();
-            return Divider(
-              height: 1,
-              thickness: 0.5,
-              indent: config.dividerIndent,
-              endIndent: 0,
-            );
+            return const SliverToBoxAdapter(child: SizedBox.shrink());
           }
           
           final item = items[itemIndex];
-          if (itemBuilder != null) {
-            return itemBuilder(context, item, itemIndex);
-          }
-          final isSelected = selectedIds?.contains(item.id) ?? false;
-          return YFileListItem<T>(
-            item: item,
-            config: config,
-            selected: isSelected,
-            onTap: onTap != null ? () => onTap(item, itemIndex) : null,
-            onLongPress: onLongPress != null ? () => onLongPress(item, itemIndex) : null,
-            onCheckChanged: onSelect != null
-                ? (val) => onSelect(item, val ?? false)
-                : null,
-          );
+          return itemBuilder(context, item, itemIndex);
         },
         childCount: items.isEmpty ? 0 : items.length * 2 - 1,
       ),

@@ -1,20 +1,15 @@
 import 'package:flutter/widgets.dart';
 import '../../config/y_file_grid_config.dart';
-import '../../model/y_file_item.dart';
 import '../../delegate/y_file_item_builder.dart';
 import '../../utils/y_grid_column_calculator.dart';
-import 'y_file_grid_item.dart';
 
 /// 构建宫格列表的 Sliver 组件
 /// 直接返回原生 [SliverPadding] 封装的 [SliverGrid]
-SliverPadding buildSliverYFileGridView<T extends YFileItem>({
+SliverPadding buildSliverYFileGridView<T>({
   Key? key,
   required List<T> items,
+  required YFileGridItemBuilder<T> itemBuilder,
   YFileGridConfig config = const YFileGridConfig(),
-  YFileGridItemBuilder<T>? itemBuilder,
-  YFileItemTapCallback<T>? onTap,
-  YFileItemLongPressCallback<T>? onLongPress,
-  Set<String>? selectedIds,
   double? availableWidth,
 }) {
   final w = availableWidth ?? 0;
@@ -41,18 +36,7 @@ SliverPadding buildSliverYFileGridView<T extends YFileItem>({
       delegate: SliverChildBuilderDelegate(
         (context, index) {
           final item = items[index];
-          final isSelected = selectedIds?.contains(item.id) ?? false;
-
-          if (itemBuilder != null) {
-            return itemBuilder(context, item, index);
-          }
-
-          return YFileGridItem<T>(
-            item: item,
-            selected: isSelected,
-            onTap: onTap != null ? () => onTap(item, index) : null,
-            onLongPress: onLongPress != null ? () => onLongPress(item, index) : null,
-          );
+          return itemBuilder(context, item, index);
         },
         childCount: items.length,
       ),

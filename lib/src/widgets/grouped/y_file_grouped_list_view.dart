@@ -1,6 +1,5 @@
 import 'package:flutter/widgets.dart';
 import '../../config/y_file_grouped_config.dart';
-import '../../model/y_file_item.dart';
 import '../../model/y_file_group.dart';
 import '../../delegate/y_file_item_builder.dart';
 import 'sliver_y_file_grouped_list_view.dart';
@@ -17,14 +16,11 @@ import 'sliver_y_file_grouped_list_view.dart';
 ///   onTap: (file, i) => print(file.name),
 /// )
 /// ```
-class YFileGroupedListView<T extends YFileItem> extends StatelessWidget {
+class YFileGroupedListView<T> extends StatelessWidget {
   final List<YFileGroup<T>> groups;
   final YFileGroupedConfig config;
-  final YFileGroupHeaderBuilder<T>? headerBuilder;
-  final YFileGroupItemBuilder<T>? itemBuilder;
-  final YFileItemTapCallback<T>? onTap;
-  final YFileItemLongPressCallback<T>? onLongPress;
-  final Set<String>? selectedIds;
+  final YFileGroupHeaderBuilder<T> headerBuilder;
+  final YFileGroupItemBuilder<T> itemBuilder;
   final ScrollController? controller;
   final bool reverse;
   final ScrollPhysics? physics;
@@ -33,12 +29,9 @@ class YFileGroupedListView<T extends YFileItem> extends StatelessWidget {
   const YFileGroupedListView({
     super.key,
     required this.groups,
+    required this.headerBuilder,
+    required this.itemBuilder,
     this.config = const YFileGroupedConfig(),
-    this.headerBuilder,
-    this.itemBuilder,
-    this.onTap,
-    this.onLongPress,
-    this.selectedIds,
     this.controller,
     this.reverse = false,
     this.physics,
@@ -57,10 +50,9 @@ class YFileGroupedListView<T extends YFileItem> extends StatelessWidget {
           slivers: [
             ...buildSliverYFileGroupedListView<T>(
               groups: groups,
-              config: config,
               headerBuilder: headerBuilder,
               itemBuilder: itemBuilder,
-              selectedIds: selectedIds,
+              config: config,
               availableWidth: constraints.maxWidth -
                   (config.mode == YFileGroupedMode.grid
                       ? config.gridConfig.padding.horizontal

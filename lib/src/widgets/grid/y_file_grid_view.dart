@@ -1,6 +1,5 @@
 import 'package:flutter/widgets.dart';
 import '../../config/y_file_grid_config.dart';
-import '../../model/y_file_item.dart';
 import '../../delegate/y_file_item_builder.dart';
 import 'sliver_y_file_grid_view.dart';
 
@@ -16,24 +15,15 @@ import 'sliver_y_file_grid_view.dart';
 ///   onTap: (file, index) => print(file.name),
 /// )
 /// ```
-class YFileGridView<T extends YFileItem> extends StatelessWidget {
+class YFileGridView<T> extends StatelessWidget {
   /// 文件数据列表
   final List<T> items;
 
-  /// 宫格配置（默认 3 列）
+  /// 宫格参数配置
   final YFileGridConfig config;
 
-  /// 自定义单元格构建器；为 null 时使用默认实现
-  final YFileGridItemBuilder<T>? itemBuilder;
-
-  /// 点击回调
-  final YFileItemTapCallback<T>? onTap;
-
-  /// 长按回调
-  final YFileItemLongPressCallback<T>? onLongPress;
-
-  /// 选中的文件 id 集合（多选模式时传入）
-  final Set<String>? selectedIds;
+  /// 自定义单元格构建器（必填）
+  final YFileGridItemBuilder<T> itemBuilder;
 
   /// 列表滚动控制器
   final ScrollController? controller;
@@ -53,11 +43,8 @@ class YFileGridView<T extends YFileItem> extends StatelessWidget {
   const YFileGridView({
     super.key,
     required this.items,
+    required this.itemBuilder,
     this.config = const YFileGridConfig(),
-    this.itemBuilder,
-    this.onTap,
-    this.onLongPress,
-    this.selectedIds,
     this.controller,
     this.scrollDirection = Axis.vertical,
     this.reverse = false,
@@ -79,11 +66,8 @@ class YFileGridView<T extends YFileItem> extends StatelessWidget {
           slivers: [
             buildSliverYFileGridView<T>(
               items: items,
-              config: config,
               itemBuilder: itemBuilder,
-              onTap: onTap,
-              onLongPress: onLongPress,
-              selectedIds: selectedIds,
+              config: config,
               availableWidth: constraints.maxWidth - config.padding.horizontal,
             ),
           ],

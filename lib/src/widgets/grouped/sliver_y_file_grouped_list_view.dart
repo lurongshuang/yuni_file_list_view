@@ -1,28 +1,23 @@
 import 'package:flutter/widgets.dart';
 import '../../config/y_file_grouped_config.dart';
-import '../../model/y_file_item.dart';
 import '../../model/y_file_group.dart';
 import '../../delegate/y_file_item_builder.dart';
 import '../../utils/y_grid_column_calculator.dart';
-import '../grid/y_file_grid_item.dart';
-import '../list/y_file_list_item.dart';
-import 'y_file_group_header.dart';
 import 'package:sliver_tools/sliver_tools.dart';
 
 /// 构建分组宫格文件列表的 Sliver 组件
 ///
 /// 返回一个包含多个 Sliver 的列表（基于每个分组单独包装的 [SliverMainAxisGroup] 实现）
 ///
-/// 每个分组由「粘性/非粘性 Header Sliver」+「网格 SliverPadding」组成
-List<Widget> buildSliverYFileGroupedListView<T extends YFileItem>({
+///   Key? key,
+///   required List<YFileGroup<T>> groups,
+///   required YFileGroupHeaderBuilder<T> headerBuilder,
+List<Widget> buildSliverYFileGroupedListView<T>({
   Key? key,
   required List<YFileGroup<T>> groups,
+  required YFileGroupHeaderBuilder<T> headerBuilder,
+  required YFileGroupItemBuilder<T> itemBuilder,
   YFileGroupedConfig config = const YFileGroupedConfig(),
-  YFileGroupHeaderBuilder<T>? headerBuilder,
-  YFileGroupItemBuilder<T>? itemBuilder,
-  YFileItemTapCallback<T>? onTap,
-  YFileItemLongPressCallback<T>? onLongPress,
-  Set<String>? selectedIds,
   double? availableWidth,
 }) {
   final gridConfig = config.gridConfig;
@@ -43,23 +38,15 @@ List<Widget> buildSliverYFileGroupedListView<T extends YFileItem>({
     final group = groups[gi];
 
     // ── Header Sliver ──
-    final defaultHeader = YFileGroupHeader<T>(group: group, groupIndex: gi, config: config);
     Widget headerSliver;
 
     if (config.pinnedHeader) {
       headerSliver = SliverPinnedHeader(
-        child: SizedBox(
-          height: config.headerHeight,
-          child: Builder(builder: (context) {
-            return headerBuilder != null ? headerBuilder(context, group, gi) : defaultHeader;
-          }),
-        ),
+        child: Builder(builder: (context) => headerBuilder(context, group, gi)),
       );
     } else {
       headerSliver = SliverToBoxAdapter(
-        child: Builder(builder: (context) {
-          return headerBuilder != null ? headerBuilder(context, group, gi) : defaultHeader;
-        }),
+        child: Builder(builder: (context) => headerBuilder(context, group, gi)),
       );
     }
 
@@ -80,18 +67,7 @@ List<Widget> buildSliverYFileGroupedListView<T extends YFileItem>({
           delegate: SliverChildBuilderDelegate(
             (context, index) {
               final item = items[index];
-              final isSelected = selectedIds?.contains(item.id) ?? false;
-
-              if (itemBuilder != null) {
-                return itemBuilder(context, group, item, gi, index);
-              }
-
-              return YFileGridItem<T>(
-                item: item,
-                selected: isSelected,
-                onTap: onTap != null ? () => onTap(item, index) : null,
-                onLongPress: onLongPress != null ? () => onLongPress(item, index) : null,
-              );
+              return itemBuilder(context, group, item, gi, index);
             },
             childCount: items.length,
           ),
@@ -106,19 +82,7 @@ List<Widget> buildSliverYFileGroupedListView<T extends YFileItem>({
           delegate: SliverChildBuilderDelegate(
             (context, index) {
               final item = items[index];
-              final isSelected = selectedIds?.contains(item.id) ?? false;
-
-              if (itemBuilder != null) {
-                return itemBuilder(context, group, item, gi, index);
-              }
-
-              return YFileListItem<T>(
-                item: item,
-                config: listConfig,
-                selected: isSelected,
-                onTap: onTap != null ? () => onTap(item, index) : null,
-                onLongPress: onLongPress != null ? () => onLongPress(item, index) : null,
-              );
+              return itemBuilder(context, group, item, gi, index);
             },
             childCount: items.length,
           ),

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../model/y_file_item.dart';
+import '../models/y_file_item.dart';
 
 /// 宫格列表单元格默认实现
 ///
@@ -27,17 +27,20 @@ class YFileGridItem<T extends YFileItem> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      onLongPress: onLongPress,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // ── 主内容：缩略图 or 类型色块 ──
-          _buildContent(),
-          // ── 选中蒙层 + 角标 ──
-          if (selected) _buildSelectedOverlay(),
-        ],
+    return Container(
+      color: Colors.grey,
+      child: GestureDetector(
+        onTap: onTap,
+        onLongPress: onLongPress,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // ── 主内容：缩略图 or 类型色块 ──
+            _buildContent(),
+            // ── 选中蒙层 + 角标 ──
+            if (selected) _buildSelectedOverlay(),
+          ],
+        ),
       ),
     );
   }
