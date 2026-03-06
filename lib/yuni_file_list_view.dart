@@ -33,3 +33,6 @@ export 'src/widgets/list/y_file_list_view.dart';
 // ─── 分组列表 ─────────────────────────────────────────────────────────────────
 export 'src/widgets/grouped/sliver_y_file_grouped_list_view.dart';
 export 'src/widgets/grouped/y_file_grouped_list_view.dart';
+
+// ─── 高级交互能力 ─────────────────────────────────────────────────────────────
+export 'src/widgets/interaction/y_drag_select_region.dart';

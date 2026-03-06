@@ -1,4 +1,5 @@
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:yuni_file_list_view/yuni_file_list_view.dart';
 import '../models/y_file_item.dart';
@@ -15,12 +16,41 @@ class PhotoGalleryDemoPage extends StatefulWidget {
 }
 
 class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
-  String _dimension = 'month'; // 'year', 'month', 'day'
+  String _dimension = 'month';
   YFileGroupedMode _mode = YFileGroupedMode.grid;
   final Set<String> _selectedIds = {};
-  
-  // 使用相同的 ScrollController 并在维度切换时尝试保留偏移
+
+  List<YFileGroup<YFileItem>> _groups = [];
+  List<YFileItem> _flatItems = [];
+  List<int> _groupOffsets = [];
+
+  Set<String> _dragStartSelectedIds = {};
+  bool _isSelecting = true;
+
   final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _updateData();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _updateData() {
+    _groups = DemoData.getGroupsByDimension(_dimension);
+    _flatItems = _groups.expand((g) => g.items).toList();
+    _groupOffsets = [];
+    int offset = 0;
+    for (var g in _groups) {
+      _groupOffsets.add(offset);
+      offset += g.items.length;
+    }
+  }
 
   void _toggleSelection(String id) {
     setState(() {
@@ -36,6 +66,7 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
     if (_dimension == dim) return;
     setState(() {
       _dimension = dim;
+      _updateData();
     });
   }
 
@@ -45,11 +76,50 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
     });
   }
 
+  void _onDragSelectStart(int index) {
+    if (index < 0 || index >= _flatItems.length) return;
+    final id = _flatItems[index].id;
+    
+    _dragStartSelectedIds = Set.from(_selectedIds);
+    _isSelecting = !_selectedIds.contains(id);
+
+    setState(() {
+      if (_isSelecting) {
+        _selectedIds.add(id);
+      } else {
+        _selectedIds.remove(id);
+      }
+    });
+  }
+
+  void _onDragSelectUpdate(int startIndex, int currentIndex) {
+    if (startIndex < 0 || currentIndex < 0 || _flatItems.isEmpty) return;
+    if (startIndex >= _flatItems.length || currentIndex >= _flatItems.length) return;
+    
+    final int minIdx = startIndex < currentIndex ? startIndex : currentIndex;
+    final int maxIdx = startIndex > currentIndex ? startIndex : currentIndex;
+    
+    final Set<String> newSelection = Set.from(_dragStartSelectedIds);
+    
+    for (int i = minIdx; i <= maxIdx; i++) {
+      final id = _flatItems[i].id;
+      if (_isSelecting) {
+        newSelection.add(id);
+      } else {
+        newSelection.remove(id);
+      }
+    }
+    
+    if (newSelection.length != _selectedIds.length || !newSelection.containsAll(_selectedIds)) {
+      setState(() {
+        _selectedIds.clear();
+        _selectedIds.addAll(newSelection);
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final groups = DemoData.getGroupsByDimension(_dimension);
-    
-    // 根据维度和模式决定布局
     int crossAxisCount = 4;
     if (_dimension == 'year') crossAxisCount = 5;
     if (_dimension == 'day') crossAxisCount = 3;
@@ -58,7 +128,6 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // 背景层级做一点渐变或者干净的处理
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -69,26 +138,21 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
             ),
           ),
 
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            transitionBuilder: (Widget child, Animation<double> animation) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-            child: KeyedSubtree(
-              key: ValueKey('switcher_$_dimension$_mode'),
-              child: CustomScrollView(
-                key: const PageStorageKey('gallery_shared_scroll_position'),
-                controller: _scrollController,
-                physics: const AlwaysScrollableScrollPhysics(),
+          YDragSelectRegion(
+            scrollController: _scrollController,
+            onDragSelectStart: (idx) => _onDragSelectStart(idx),
+            onDragSelectUpdate: (start, current) => _onDragSelectUpdate(start, current),
+            child: CustomScrollView(
+              key: const PageStorageKey('gallery_shared_scroll_position'),
+              controller: _scrollController,
+              physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
-                // 1. 顶部 Header (视觉升级)
                 SliverAppBar(
                   leading: IconButton(
                     icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: Colors.black87),
                     onPressed: () => Navigator.pop(context),
                   ),
                   actions: [
-                    // 模式切换按钮
                     IconButton(
                       icon: Icon(_mode == YFileGroupedMode.grid ? Icons.format_list_bulleted : Icons.grid_view, color: Colors.blue),
                       tooltip: _mode == YFileGroupedMode.grid ? '切换至列表' : '切换至宫格',
@@ -124,7 +188,6 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
                   ),
                 ),
 
-                // 2. 模拟筛选按钮栏 (间距优化 - 加大下间距让页面透气)
                 SliverToBoxAdapter(
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
@@ -142,9 +205,8 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
                   ),
                 ),
 
-                // 3. 分组列表核心 (支持 List/Grid 混合)
                 ...buildSliverYFileGroupedListView<YFileItem>(
-                  groups: groups,
+                  groups: _groups,
                   config: YFileGroupedConfig(
                     mode: _mode,
                     gridConfig: YFileGridConfig(
@@ -175,32 +237,37 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
                   },
                   itemBuilder: (context, group, item, groupIndex, itemIndex) {
                     final isSelected = _selectedIds.contains(item.id);
+                    int globalIndex = _groupOffsets[groupIndex] + itemIndex;
+
+                    Widget child;
                     if (_mode == YFileGroupedMode.grid) {
-                      return YFileGridItem(
+                      child = YFileGridItem(
                         item: item,
                         selected: isSelected,
                         onTap: () => _toggleSelection(item.id),
                       );
                     } else {
-                      return YFileListItem(
+                      child = YFileListItem(
                         item: item,
                         config: const YFileListUIConfig(showDivider: true, dividerIndent: 76),
                         selected: isSelected,
                         onTap: () => _toggleSelection(item.id),
                       );
                     }
+                    
+                    return YDragSelectElement(
+                      index: globalIndex,
+                      child: child,
+                    );
                   },
                 ),
 
-                // 底部安全留白
                 const SliverToBoxAdapter(child: SizedBox(height: 140)),
               ],
             ),
           ),
-        ),
-
-        // 4. 底部切换器 (视觉全方位升级)
-        Positioned(
+          
+          Positioned(
             bottom: 84,
             left: 0,
             right: 0,
@@ -270,7 +337,7 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
         behavior: HitTestBehavior.opaque,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 250),
-          curve: Curves.fastOutSlowIn, // 使用安全曲线，避免超调导致的阴影负值断言错误
+          curve: Curves.fastOutSlowIn,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: selected ? Colors.blue : Colors.transparent,

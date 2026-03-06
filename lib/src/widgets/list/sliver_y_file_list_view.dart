@@ -24,7 +24,7 @@ SliverPadding buildSliverYFileListView<T>({
             if (separatorBuilder != null) {
               return separatorBuilder(context, itemIndex);
             }
-            return const SliverToBoxAdapter(child: SizedBox.shrink());
+            return const SizedBox.shrink();
           }
           
           final item = items[itemIndex];
