@@ -84,13 +84,14 @@ class YDragSelectRegion extends StatefulWidget {
   State<YDragSelectRegion> createState() => _YDragSelectRegionState();
 }
 
-class _YDragSelectRegionState extends State<YDragSelectRegion> with SingleTickerProviderStateMixin {
+class _YDragSelectRegionState extends State<YDragSelectRegion>
+    with SingleTickerProviderStateMixin {
   int? _startIndex;
   int? _currentIndex;
 
   Offset? _currentGlobalPointer;
   late Ticker _autoScrollTicker;
-  
+
   @override
   void initState() {
     super.initState();
@@ -123,11 +124,15 @@ class _YDragSelectRegionState extends State<YDragSelectRegion> with SingleTicker
 
     if (y < widget.autoScrollEdgeThreshold) {
       // 靠近顶部，向上滚动，速度逐渐增加
-      final ratio = (widget.autoScrollEdgeThreshold - y.clamp(0.0, widget.autoScrollEdgeThreshold)) / widget.autoScrollEdgeThreshold;
+      final ratio = (widget.autoScrollEdgeThreshold -
+              y.clamp(0.0, widget.autoScrollEdgeThreshold)) /
+          widget.autoScrollEdgeThreshold;
       velocity = -widget.maxAutoScrollVelocity * ratio;
     } else if (y > height - widget.autoScrollEdgeThreshold) {
       // 靠近底部，向下滚动，速度逐渐增加
-      final ratio = ((y - (height - widget.autoScrollEdgeThreshold)).clamp(0.0, widget.autoScrollEdgeThreshold)) / widget.autoScrollEdgeThreshold;
+      final ratio = ((y - (height - widget.autoScrollEdgeThreshold))
+              .clamp(0.0, widget.autoScrollEdgeThreshold)) /
+          widget.autoScrollEdgeThreshold;
       velocity = widget.maxAutoScrollVelocity * ratio;
     }
 
@@ -150,7 +155,7 @@ class _YDragSelectRegionState extends State<YDragSelectRegion> with SingleTicker
 
     final localPosition = box.globalToLocal(globalPosition);
     final BoxHitTestResult result = BoxHitTestResult();
-    
+
     // 只检索包裹在自己视觉下的 RenderBox 子树
     box.hitTest(result, position: localPosition);
 
@@ -161,10 +166,10 @@ class _YDragSelectRegionState extends State<YDragSelectRegion> with SingleTicker
         if (meta is _YDragSelectData) {
           final index = meta.index;
           if (_currentIndex != index) {
-             _currentIndex = index;
-             if (_startIndex != null) {
-               widget.onDragSelectUpdate?.call(_startIndex!, _currentIndex!);
-             }
+            _currentIndex = index;
+            if (_startIndex != null) {
+              widget.onDragSelectUpdate?.call(_startIndex!, _currentIndex!);
+            }
           }
           return index;
         }
@@ -180,7 +185,7 @@ class _YDragSelectRegionState extends State<YDragSelectRegion> with SingleTicker
       _currentIndex = index;
       _currentGlobalPointer = details.globalPosition;
       widget.onDragSelectStart?.call(index);
-      
+
       // 可以开启边缘滚动了
       if (!_autoScrollTicker.isTicking) {
         _autoScrollTicker.start();
@@ -200,8 +205,8 @@ class _YDragSelectRegionState extends State<YDragSelectRegion> with SingleTicker
   }
 
   void _onLongPressCancel() {
-     _cleanup();
-     widget.onDragSelectEnd?.call();
+    _cleanup();
+    widget.onDragSelectEnd?.call();
   }
 
   void _cleanup() {

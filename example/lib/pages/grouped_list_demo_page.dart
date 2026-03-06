@@ -39,11 +39,14 @@ class GroupedListDemoPage extends StatelessWidget {
                 config: const YFileListUIConfig(showDivider: true),
                 onTap: () {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('查看文件：${item.name}'), duration: const Duration(seconds: 1)),
+                    SnackBar(
+                        content: Text('查看文件：${item.name}'),
+                        duration: const Duration(seconds: 1)),
                   );
                 },
               ),
-              const Divider(height: 1, indent: 72, endIndent: 0, thickness: 0.5),
+              const Divider(
+                  height: 1, indent: 72, endIndent: 0, thickness: 0.5),
             ],
           );
         },

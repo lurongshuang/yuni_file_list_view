@@ -34,7 +34,8 @@ class YFileListUIConfig {
     this.dividerIndent = 72.0,
     this.showCheckbox = false,
     this.padding = EdgeInsets.zero,
-    this.itemPadding = const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+    this.itemPadding =
+        const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
   });
 
   YFileListUIConfig copyWith({
@@ -50,7 +51,8 @@ class YFileListUIConfig {
     return YFileListUIConfig(
       itemHeight: itemHeight ?? this.itemHeight,
       thumbnailSize: thumbnailSize ?? this.thumbnailSize,
-      thumbnailBorderRadius: thumbnailBorderRadius ?? this.thumbnailBorderRadius,
+      thumbnailBorderRadius:
+          thumbnailBorderRadius ?? this.thumbnailBorderRadius,
       showDivider: showDivider ?? this.showDivider,
       dividerIndent: dividerIndent ?? this.dividerIndent,
       showCheckbox: showCheckbox ?? this.showCheckbox,

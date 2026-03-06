@@ -68,7 +68,8 @@ class DemoHomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildCard(BuildContext context, {
+  Widget _buildCard(
+    BuildContext context, {
     required String title,
     required String subtitle,
     required IconData icon,
@@ -101,9 +102,13 @@ class DemoHomePage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    Text(title,
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 4),
-                    Text(subtitle, style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+                    Text(subtitle,
+                        style: TextStyle(
+                            fontSize: 13, color: Colors.grey.shade600)),
                   ],
                 ),
               ),

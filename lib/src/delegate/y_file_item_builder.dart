@@ -49,4 +49,3 @@ typedef YFileGroupItemBuilder<T> = Widget Function(
   int groupIndex,
   int itemIndex,
 );
-

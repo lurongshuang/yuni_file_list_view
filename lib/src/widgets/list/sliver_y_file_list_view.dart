@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../config/y_file_list_config.dart';
 import '../../delegate/y_file_item_builder.dart';
 
-
 /// 构建纵向列表的 Sliver 组件
 /// 直接返回原生 [SliverPadding] 封装的 [SliverList]
 SliverPadding buildSliverYFileListView<T>({
@@ -26,7 +25,7 @@ SliverPadding buildSliverYFileListView<T>({
             }
             return const SizedBox.shrink();
           }
-          
+
           final item = items[itemIndex];
           return itemBuilder(context, item, itemIndex);
         },

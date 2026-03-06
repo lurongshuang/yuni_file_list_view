@@ -37,7 +37,8 @@ class _ListDemoPageState extends State<ListDemoPage> {
             children: [
               YFileListItem(
                 item: item,
-                config: const YFileListUIConfig(showCheckbox: true, thumbnailSize: 56),
+                config: const YFileListUIConfig(
+                    showCheckbox: true, thumbnailSize: 56),
                 selected: isSelected,
                 onTap: () {
                   setState(() {
@@ -58,7 +59,8 @@ class _ListDemoPageState extends State<ListDemoPage> {
                   });
                 },
               ),
-              const Divider(height: 1, indent: 72, endIndent: 0, thickness: 0.5),
+              const Divider(
+                  height: 1, indent: 72, endIndent: 0, thickness: 0.5),
             ],
           );
         },

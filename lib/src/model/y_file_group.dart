@@ -1,4 +1,3 @@
-
 /// 文件分组数据模型
 ///
 /// 用于 [YFileGroupedListView] 和 [SliverYFileGroupedListView]。
@@ -52,11 +51,14 @@ class YFileGroup<T> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is YFileGroup && runtimeType == other.runtimeType && groupId == other.groupId;
+      other is YFileGroup &&
+          runtimeType == other.runtimeType &&
+          groupId == other.groupId;
 
   @override
   int get hashCode => groupId.hashCode;
 
   @override
-  String toString() => 'YFileGroup(groupId: $groupId, title: $groupTitle, count: $count)';
+  String toString() =>
+      'YFileGroup(groupId: $groupId, title: $groupTitle, count: $count)';
 }

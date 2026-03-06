@@ -38,7 +38,10 @@ class TestPage extends StatelessWidget {
           pinned: true,
           delegate: MyHeader(color: color, title: title),
         ),
-        SliverList(delegate: SliverChildBuilderDelegate((c, i) => ListTile(title: Text('$title - Item $i')), childCount: 20)),
+        SliverList(
+            delegate: SliverChildBuilderDelegate(
+                (c, i) => ListTile(title: Text('$title - Item $i')),
+                childCount: 20)),
       ],
     );
   }
@@ -51,11 +54,13 @@ class MyHeader extends SliverPersistentHeaderDelegate {
   MyHeader({required this.color, required this.title});
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Container(
       color: color,
       alignment: Alignment.centerLeft,
-      child: Text(title, style: const TextStyle(fontSize: 24, color: Colors.white)),
+      child: Text(title,
+          style: const TextStyle(fontSize: 24, color: Colors.white)),
     );
   }
 

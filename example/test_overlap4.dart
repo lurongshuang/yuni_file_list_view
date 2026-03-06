@@ -35,9 +35,16 @@ class TestPage extends StatelessWidget {
               slivers: [
                 SliverPersistentHeader(
                   pinned: true,
-                  delegate: _StickyHeaderDelegate(color: gi == 0 ? Colors.red : (gi==1?Colors.blue:Colors.green), title: 'Group $gi'),
+                  delegate: _StickyHeaderDelegate(
+                      color: gi == 0
+                          ? Colors.red
+                          : (gi == 1 ? Colors.blue : Colors.green),
+                      title: 'Group $gi'),
                 ),
-                SliverList(delegate: SliverChildBuilderDelegate((c, i) => ListTile(title: Text('Group $gi - Item $i')), childCount: 20)),
+                SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                        (c, i) => ListTile(title: Text('Group $gi - Item $i')),
+                        childCount: 20)),
               ],
             );
           }),
@@ -53,13 +60,16 @@ class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
   const _StickyHeaderDelegate({required this.color, required this.title});
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Container(
       color: color,
       alignment: Alignment.centerLeft,
-      child: Text(title, style: const TextStyle(fontSize: 24, color: Colors.white)),
+      child: Text(title,
+          style: const TextStyle(fontSize: 24, color: Colors.white)),
     );
   }
+
   @override
   double get maxExtent => 50;
   @override

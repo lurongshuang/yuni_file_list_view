@@ -68,7 +68,8 @@ class YFileListItem<T extends YFileItem> extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
+                      color:
+                          theme.colorScheme.onSurface.withValues(alpha: 0.55),
                     ),
                   ),
                 ],
@@ -112,9 +113,11 @@ class YFileListItem<T extends YFileItem> extends StatelessWidget {
           width: size,
           height: size,
           child: isNetwork
-              ? Image.network(item.thumbnailUrl!, fit: BoxFit.cover,
+              ? Image.network(item.thumbnailUrl!,
+                  fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => _buildColorBlock(size, radius))
-              : Image.asset(item.thumbnailUrl!, fit: BoxFit.cover,
+              : Image.asset(item.thumbnailUrl!,
+                  fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => _buildColorBlock(size, radius)),
         ),
       );

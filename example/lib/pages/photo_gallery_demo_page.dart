@@ -72,14 +72,16 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
 
   void _toggleMode() {
     setState(() {
-      _mode = _mode == YFileGroupedMode.grid ? YFileGroupedMode.list : YFileGroupedMode.grid;
+      _mode = _mode == YFileGroupedMode.grid
+          ? YFileGroupedMode.list
+          : YFileGroupedMode.grid;
     });
   }
 
   void _onDragSelectStart(int index) {
     if (index < 0 || index >= _flatItems.length) return;
     final id = _flatItems[index].id;
-    
+
     _dragStartSelectedIds = Set.from(_selectedIds);
     _isSelecting = !_selectedIds.contains(id);
 
@@ -94,13 +96,14 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
 
   void _onDragSelectUpdate(int startIndex, int currentIndex) {
     if (startIndex < 0 || currentIndex < 0 || _flatItems.isEmpty) return;
-    if (startIndex >= _flatItems.length || currentIndex >= _flatItems.length) return;
-    
+    if (startIndex >= _flatItems.length || currentIndex >= _flatItems.length)
+      return;
+
     final int minIdx = startIndex < currentIndex ? startIndex : currentIndex;
     final int maxIdx = startIndex > currentIndex ? startIndex : currentIndex;
-    
+
     final Set<String> newSelection = Set.from(_dragStartSelectedIds);
-    
+
     for (int i = minIdx; i <= maxIdx; i++) {
       final id = _flatItems[i].id;
       if (_isSelecting) {
@@ -109,8 +112,9 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
         newSelection.remove(id);
       }
     }
-    
-    if (newSelection.length != _selectedIds.length || !newSelection.containsAll(_selectedIds)) {
+
+    if (newSelection.length != _selectedIds.length ||
+        !newSelection.containsAll(_selectedIds)) {
       setState(() {
         _selectedIds.clear();
         _selectedIds.addAll(newSelection);
@@ -137,11 +141,11 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
               ),
             ),
           ),
-
           YDragSelectRegion(
             scrollController: _scrollController,
             onDragSelectStart: (idx) => _onDragSelectStart(idx),
-            onDragSelectUpdate: (start, current) => _onDragSelectUpdate(start, current),
+            onDragSelectUpdate: (start, current) =>
+                _onDragSelectUpdate(start, current),
             child: CustomScrollView(
               key: const PageStorageKey('gallery_shared_scroll_position'),
               controller: _scrollController,
@@ -149,13 +153,19 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
               slivers: [
                 SliverAppBar(
                   leading: IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: Colors.black87),
+                    icon: const Icon(Icons.arrow_back_ios_new,
+                        size: 20, color: Colors.black87),
                     onPressed: () => Navigator.pop(context),
                   ),
                   actions: [
                     IconButton(
-                      icon: Icon(_mode == YFileGroupedMode.grid ? Icons.format_list_bulleted : Icons.grid_view, color: Colors.blue),
-                      tooltip: _mode == YFileGroupedMode.grid ? '切换至列表' : '切换至宫格',
+                      icon: Icon(
+                          _mode == YFileGroupedMode.grid
+                              ? Icons.format_list_bulleted
+                              : Icons.grid_view,
+                          color: Colors.blue),
+                      tooltip:
+                          _mode == YFileGroupedMode.grid ? '切换至列表' : '切换至宫格',
                       onPressed: _toggleMode,
                     ),
                     IconButton(
@@ -167,11 +177,18 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
                   title: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('2025年春节', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Colors.black)),
+                      const Text('2025年春节',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 18,
+                              color: Colors.black)),
                       const SizedBox(height: 2),
                       Text(
                         '3012张图片  124个视频  80个其他文件',
-                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontWeight: FontWeight.normal),
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                            fontWeight: FontWeight.normal),
                       ),
                     ],
                   ),
@@ -187,7 +204,6 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
                     ),
                   ),
                 ),
-
                 SliverToBoxAdapter(
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
@@ -204,7 +220,6 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
                     ),
                   ),
                 ),
-
                 ...buildSliverYFileGroupedListView<YFileItem>(
                   groups: _groups,
                   config: YFileGroupedConfig(
@@ -213,7 +228,7 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
                       crossAxisCount: crossAxisCount,
                       crossAxisSpacing: 1.0,
                       mainAxisSpacing: 1.0,
-                      padding: EdgeInsets.zero, 
+                      padding: EdgeInsets.zero,
                     ),
                     listConfig: const YFileListConfig(
                       padding: EdgeInsets.zero,
@@ -227,8 +242,8 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
                       child: Text(
                         group.groupTitle,
                         style: const TextStyle(
-                          fontSize: 16, 
-                          fontWeight: FontWeight.w700, 
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
                           color: Colors.black87,
                           letterSpacing: -0.4,
                         ),
@@ -249,24 +264,23 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
                     } else {
                       child = YFileListItem(
                         item: item,
-                        config: const YFileListUIConfig(showDivider: true, dividerIndent: 76),
+                        config: const YFileListUIConfig(
+                            showDivider: true, dividerIndent: 76),
                         selected: isSelected,
                         onTap: () => _toggleSelection(item.id),
                       );
                     }
-                    
+
                     return YDragSelectElement(
                       index: globalIndex,
                       child: child,
                     );
                   },
                 ),
-
                 const SliverToBoxAdapter(child: SizedBox(height: 140)),
               ],
             ),
           ),
-          
           Positioned(
             bottom: 84,
             left: 0,
@@ -283,7 +297,9 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.85),
                       borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: Colors.black.withValues(alpha: 0.05), width: 0.5),
+                      border: Border.all(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          width: 0.5),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.1),
@@ -321,9 +337,14 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87)),
+          Text(label,
+              style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87)),
           const SizedBox(width: 4),
-          Icon(Icons.keyboard_arrow_down, size: 16, color: Colors.grey.shade500),
+          Icon(Icons.keyboard_arrow_down,
+              size: 16, color: Colors.grey.shade500),
         ],
       ),
     );
@@ -342,13 +363,15 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
           decoration: BoxDecoration(
             color: selected ? Colors.blue : Colors.transparent,
             borderRadius: BorderRadius.circular(20),
-            boxShadow: selected ? [
-              BoxShadow(
-                color: Colors.blue.withValues(alpha: 0.35),
-                blurRadius: 15,
-                offset: const Offset(0, 6),
-              )
-            ] : [],
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: Colors.blue.withValues(alpha: 0.35),
+                      blurRadius: 15,
+                      offset: const Offset(0, 6),
+                    )
+                  ]
+                : [],
           ),
           child: Text(
             label,

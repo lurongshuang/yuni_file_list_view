@@ -39,15 +39,18 @@ class SliverDemoPage extends StatelessWidget {
             groups: DemoData.groupedItems.take(2).toList(),
             config: YFileGroupedConfig(
               pinnedHeader: true,
-              gridConfig: const YFileGridConfig(crossAxisCount: 3, crossAxisSpacing: 2, mainAxisSpacing: 2),
+              gridConfig: const YFileGridConfig(
+                  crossAxisCount: 3, crossAxisSpacing: 2, mainAxisSpacing: 2),
             ),
             headerBuilder: (context, group, index) => Container(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               alignment: Alignment.centerLeft,
               color: Colors.white,
-              child: Text(group.groupTitle, style: const TextStyle(fontWeight: FontWeight.bold)),
+              child: Text(group.groupTitle,
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
             ),
-            itemBuilder: (context, group, item, gi, index) => YFileGridItem(item: item),
+            itemBuilder: (context, group, item, gi, index) =>
+                YFileGridItem(item: item),
           ),
           const SliverToBoxAdapter(
             child: Padding(
@@ -68,7 +71,8 @@ class SliverDemoPage extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               alignment: Alignment.centerLeft,
               color: Colors.grey.shade50,
-              child: Text(group.groupTitle, style: const TextStyle(fontWeight: FontWeight.bold)),
+              child: Text(group.groupTitle,
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
             ),
             itemBuilder: (context, group, item, gi, index) => Column(
               mainAxisSize: MainAxisSize.min,
@@ -77,7 +81,8 @@ class SliverDemoPage extends StatelessWidget {
                   item: item,
                   config: const YFileListUIConfig(showDivider: true),
                 ),
-                const Divider(height: 1, indent: 72, endIndent: 0, thickness: 0.5),
+                const Divider(
+                    height: 1, indent: 72, endIndent: 0, thickness: 0.5),
               ],
             ),
           ),

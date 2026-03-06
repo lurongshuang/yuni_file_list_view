@@ -28,7 +28,8 @@ class YGridColumnCalculator {
 
     if (availableWidth <= 0) return minColumns;
 
-    final columns = ((availableWidth + spacing) / (minItemWidth + spacing)).floor();
+    final columns =
+        ((availableWidth + spacing) / (minItemWidth + spacing)).floor();
     return columns.clamp(minColumns, maxColumns);
   }
 }

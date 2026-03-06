@@ -6,6 +6,7 @@ import 'y_file_list_config.dart';
 enum YFileGroupedMode {
   /// 宫格模式（默认）
   grid,
+
   /// 纵向普通列表模式
   list,
 }

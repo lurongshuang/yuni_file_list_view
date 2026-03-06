@@ -25,7 +25,8 @@ class GroupedDemoPage extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           alignment: Alignment.centerLeft,
           color: Colors.grey.shade100,
-          child: Text(group.groupTitle, style: const TextStyle(fontWeight: FontWeight.bold)),
+          child: Text(group.groupTitle,
+              style: const TextStyle(fontWeight: FontWeight.bold)),
         ),
         itemBuilder: (context, group, item, gi, index) => YFileGridItem(
           item: item,
