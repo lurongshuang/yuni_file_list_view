@@ -14,6 +14,8 @@ class YDesktopFileItem<T> extends StatelessWidget {
   final Function(bool isSecondary)? onPointerDown;
   final double height;
   final EdgeInsets padding;
+  final Color? selectedColor;
+  final BorderRadius? borderRadius;
 
   const YDesktopFileItem({
     super.key,
@@ -26,6 +28,8 @@ class YDesktopFileItem<T> extends StatelessWidget {
     this.onPointerDown,
     this.height = 32.0,
     this.padding = const EdgeInsets.symmetric(horizontal: 16),
+    this.selectedColor,
+    this.borderRadius,
   });
 
   @override
@@ -51,9 +55,9 @@ class YDesktopFileItem<T> extends StatelessWidget {
             padding: padding,
             decoration: BoxDecoration(
               color: selected 
-                  ? (theme.primaryColor.withValues(alpha: 0.2)) 
+                  ? (selectedColor ?? theme.primaryColor.withValues(alpha: 0.2)) 
                   : Colors.transparent,
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: borderRadius ?? BorderRadius.circular(4),
             ),
             child: Row(
               children: columns.map((col) {

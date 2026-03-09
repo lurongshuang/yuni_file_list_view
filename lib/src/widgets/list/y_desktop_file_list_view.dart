@@ -31,7 +31,7 @@ class YDesktopFileListView<T> extends StatefulWidget {
     T item, 
     int index, 
     bool isSelected,
-    void Function(bool isSecondary) onPointerDown,
+    void Function({bool isSecondary}) triggerSelection,
   )? itemBuilder;
 
   const YDesktopFileListView({
@@ -46,7 +46,29 @@ class YDesktopFileListView<T> extends StatefulWidget {
     this.showHeader = true,
     this.onSelectionChanged,
     this.onItemDoubleTap,
+    this.enableClearSelectionOnTapBackground = true,
+    this.marqueeFillColor,
+    this.marqueeBorderColor,
+    this.marqueeBorderWidth = 1.0,
+    this.headerDividerColor,
+    this.headerDividerWidth = 0.5,
+    this.itemSelectedColor,
+    this.itemBorderRadius,
   });
+
+  /// --- 选框样式 ---
+  final bool enableClearSelectionOnTapBackground;
+  final Color? marqueeFillColor;
+  final Color? marqueeBorderColor;
+  final double marqueeBorderWidth;
+
+  /// --- 表头样式 ---
+  final Color? headerDividerColor;
+  final double headerDividerWidth;
+
+  /// --- 默认项样式 ---
+  final Color? itemSelectedColor;
+  final BorderRadius? itemBorderRadius;
 
   @override
   State<YDesktopFileListView<T>> createState() => _YDesktopFileListViewState<T>();
@@ -80,11 +102,17 @@ class _YDesktopFileListViewState<T> extends State<YDesktopFileListView<T>> {
           YDesktopFileHeader<T>(
             columns: widget.columns,
             height: widget.headerHeight,
+            dividerColor: widget.headerDividerColor,
+            dividerWidth: widget.headerDividerWidth,
           ),
         Expanded(
           child: YDesktopSelectionRegion(
             controller: widget.controller,
             scrollController: widget.scrollController,
+            enableClearSelectionOnTapBackground: widget.enableClearSelectionOnTapBackground,
+            marqueeFillColor: widget.marqueeFillColor,
+            marqueeBorderColor: widget.marqueeBorderColor,
+            marqueeBorderWidth: widget.marqueeBorderWidth,
             customSelectionCalculator: (rectInContent) {
               final Set<int> indices = {};
               // 对于纵向列表，核心是高度计算
@@ -113,7 +141,7 @@ class _YDesktopFileListViewState<T> extends State<YDesktopFileListView<T>> {
                 final item = widget.items[index];
                 final isSelected = widget.controller.isSelected(index);
                 
-                void handlePointerDown(bool isSecondary) {
+                void triggerSelection({bool isSecondary = false}) {
                   widget.controller.handleTap(index, isSecondary: isSecondary);
                 }
 
@@ -123,7 +151,7 @@ class _YDesktopFileListViewState<T> extends State<YDesktopFileListView<T>> {
                     item, 
                     index, 
                     isSelected, 
-                    handlePointerDown,
+                    triggerSelection,
                   );
                 }
 
@@ -133,7 +161,9 @@ class _YDesktopFileListViewState<T> extends State<YDesktopFileListView<T>> {
                   columns: widget.columns,
                   height: widget.itemHeight,
                   selected: isSelected,
-                  onPointerDown: handlePointerDown,
+                  selectedColor: widget.itemSelectedColor,
+                  borderRadius: widget.itemBorderRadius,
+                  onPointerDown: (isSecondary) => triggerSelection(isSecondary: isSecondary),
                   onDoubleTap: () => widget.onItemDoubleTap?.call(item),
                 );
               },

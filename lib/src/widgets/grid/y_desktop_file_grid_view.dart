@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/gestures.dart';
+
 import '../interaction/y_desktop_selection_controller.dart';
 import '../interaction/y_desktop_selection_region.dart';
 import '../../model/y_selection_data.dart';
@@ -10,7 +10,7 @@ typedef YDesktopGridItemBuilder<T> = Widget Function(
   T item,
   int index,
   bool isSelected,
-  void Function(bool isSecondary) onPointerDown,
+  void Function({bool isSecondary}) triggerSelection,
 );
 
 /// 桌面端文件宫格视图
@@ -50,7 +50,17 @@ class YDesktopFileGridView<T> extends StatefulWidget {
     this.crossAxisSpacing = 8.0,
     this.childAspectRatio = 1.0,
     this.padding = const EdgeInsets.all(16.0),
+    this.enableClearSelectionOnTapBackground = true,
+    this.marqueeFillColor,
+    this.marqueeBorderColor,
+    this.marqueeBorderWidth = 1.0,
   });
+
+  /// --- 选框样式 ---
+  final bool enableClearSelectionOnTapBackground;
+  final Color? marqueeFillColor;
+  final Color? marqueeBorderColor;
+  final double marqueeBorderWidth;
 
   @override
   State<YDesktopFileGridView<T>> createState() => _YDesktopFileGridViewState<T>();
@@ -78,6 +88,10 @@ class _YDesktopFileGridViewState<T> extends State<YDesktopFileGridView<T>> {
     return YDesktopSelectionRegion(
       controller: widget.controller,
       scrollController: widget.scrollController,
+      enableClearSelectionOnTapBackground: widget.enableClearSelectionOnTapBackground,
+      marqueeFillColor: widget.marqueeFillColor,
+      marqueeBorderColor: widget.marqueeBorderColor,
+      marqueeBorderWidth: widget.marqueeBorderWidth,
       customSelectionCalculator: (rectInContent) {
         final Set<int> indices = {};
         
@@ -142,32 +156,19 @@ class _YDesktopFileGridViewState<T> extends State<YDesktopFileGridView<T>> {
           final item = widget.items[index];
           final isSelected = widget.controller.isSelected(index);
           
-          void handlePointerDown(bool isSecondary) {
+          void triggerSelection({bool isSecondary = false}) {
             widget.controller.handleTap(index, isSecondary: isSecondary);
           }
 
           return MetaData(
             metaData: YSelectionData(index: index, extra: item),
             behavior: HitTestBehavior.translucent,
-            child: Listener(
-              onPointerDown: (event) {
-                final isSecondary = event.buttons == kSecondaryMouseButton;
-                handlePointerDown(isSecondary);
-              },
-              child: GestureDetector(
-                onTap: () {}, // 捕获点击，防止事件冒泡到 Region 触发清空
-                behavior: HitTestBehavior.opaque,
-                child: Container(
-                  color: Colors.transparent,
-                  child: widget.itemBuilder(
-                    context, 
-                    item, 
-                    index, 
-                    isSelected,
-                    handlePointerDown,
-                  ),
-                ),
-              ),
+            child: widget.itemBuilder(
+              context, 
+              item, 
+              index, 
+              isSelected,
+              triggerSelection,
             ),
           );
         },

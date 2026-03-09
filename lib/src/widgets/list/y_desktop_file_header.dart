@@ -8,6 +8,8 @@ class YDesktopFileHeader<T> extends StatelessWidget {
   final Color? backgroundColor;
   final TextStyle? textStyle;
   final EdgeInsets padding;
+  final Color? dividerColor;
+  final double dividerWidth;
 
   const YDesktopFileHeader({
     super.key,
@@ -16,6 +18,8 @@ class YDesktopFileHeader<T> extends StatelessWidget {
     this.backgroundColor,
     this.textStyle,
     this.padding = const EdgeInsets.symmetric(horizontal: 16),
+    this.dividerColor,
+    this.dividerWidth = 0.5,
   });
 
   @override
@@ -33,8 +37,8 @@ class YDesktopFileHeader<T> extends StatelessWidget {
         color: backgroundColor ?? theme.scaffoldBackgroundColor,
         border: Border(
           bottom: BorderSide(
-            color: theme.dividerColor.withValues(alpha: 0.1),
-            width: 0.5,
+            color: dividerColor ?? theme.dividerColor.withValues(alpha: 0.1),
+            width: dividerWidth,
           ),
         ),
       ),

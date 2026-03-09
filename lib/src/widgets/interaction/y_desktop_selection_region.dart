@@ -19,10 +19,20 @@ class YDesktopSelectionRegion extends StatefulWidget {
   /// 边缘自动滚动的最大速度
   final double maxAutoScrollVelocity;
 
-  /// 逻辑选择计算器。如果不传，则回退到通过遍历渲染树（RenderTree）寻找 [YSelectionData] 的物理检测。
-  /// 对于开启了虚拟化的列表（如 ListView.builder），必须传入此计算器以保证滑出屏幕的项目能维持选中。
-  /// 参数 Rect 是相对于整个内容区域（Content Space）的矩形。
+  /// 逻辑选择计算器
   final Set<int> Function(Rect rectInContent)? customSelectionCalculator;
+
+  /// 是否开启点击背景清除选择
+  final bool enableClearSelectionOnTapBackground;
+  
+  /// 选框填充颜色
+  final Color? marqueeFillColor;
+  
+  /// 选框边框颜色
+  final Color? marqueeBorderColor;
+  
+  /// 选框边框宽度
+  final double marqueeBorderWidth;
 
   const YDesktopSelectionRegion({
     super.key,
@@ -32,6 +42,10 @@ class YDesktopSelectionRegion extends StatefulWidget {
     this.customSelectionCalculator,
     this.autoScrollEdgeThreshold = 80.0,
     this.maxAutoScrollVelocity = 14.0,
+    this.enableClearSelectionOnTapBackground = true,
+    this.marqueeFillColor,
+    this.marqueeBorderColor,
+    this.marqueeBorderWidth = 1.0,
   });
 
   @override
@@ -229,6 +243,7 @@ class _YDesktopSelectionRegionState extends State<YDesktopSelectionRegion>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final box = context.findRenderObject() as RenderBox?;
     
     Offset? startInViewport;
@@ -249,8 +264,10 @@ class _YDesktopSelectionRegionState extends State<YDesktopSelectionRegion>
       onPanEnd: _onPanEnd,
       onPanCancel: _onPanCancel,
       onTap: () {
-        // 点击背景（未被子组件拦截）时清除选择
-        widget.controller.clearSelection();
+        if (widget.enableClearSelectionOnTapBackground) {
+          // 点击背景（未被子组件拦截）时清除选择
+          widget.controller.clearSelection();
+        }
       },
       behavior: HitTestBehavior.opaque,
       child: Stack(
@@ -261,6 +278,9 @@ class _YDesktopSelectionRegionState extends State<YDesktopSelectionRegion>
               painter: _MarqueePainter(
                 start: startInViewport,
                 current: currentInViewport,
+                fillColor: widget.marqueeFillColor ?? theme.primaryColor.withValues(alpha: 0.2),
+                borderColor: widget.marqueeBorderColor ?? theme.primaryColor,
+                borderWidth: widget.marqueeBorderWidth,
               ),
               size: Size.infinite,
             ),
@@ -273,20 +293,29 @@ class _YDesktopSelectionRegionState extends State<YDesktopSelectionRegion>
 class _MarqueePainter extends CustomPainter {
   final Offset start;
   final Offset current;
+  final Color fillColor;
+  final Color borderColor;
+  final double borderWidth;
 
-  _MarqueePainter({required this.start, required this.current});
+  _MarqueePainter({
+    required this.start, 
+    required this.current,
+    required this.fillColor,
+    required this.borderColor,
+    required this.borderWidth,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Rect.fromPoints(start, current);
     final paint = Paint()
-      ..color = Colors.blue.withValues(alpha: 0.2)
+      ..color = fillColor
       ..style = PaintingStyle.fill;
     
     final borderPaint = Paint()
-      ..color = Colors.blue
+      ..color = borderColor
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
+      ..strokeWidth = borderWidth;
 
     canvas.drawRect(rect, paint);
     canvas.drawRect(rect, borderPaint);
@@ -294,5 +323,9 @@ class _MarqueePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_MarqueePainter oldDelegate) => 
-      oldDelegate.start != start || oldDelegate.current != current;
+      oldDelegate.start != start || 
+      oldDelegate.current != current ||
+      oldDelegate.fillColor != fillColor ||
+      oldDelegate.borderColor != borderColor ||
+      oldDelegate.borderWidth != borderWidth;
 }

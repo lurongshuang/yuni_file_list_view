@@ -51,7 +51,17 @@ class YDesktopGroupedGridView<T> extends StatefulWidget {
     this.groupHeaderHeight = 40.0,
     this.groupHeaderBuilder,
     this.padding = const EdgeInsets.all(16.0),
+    this.enableClearSelectionOnTapBackground = true,
+    this.marqueeFillColor,
+    this.marqueeBorderColor,
+    this.marqueeBorderWidth = 1.0,
   });
+
+  /// --- 选框样式 ---
+  final bool enableClearSelectionOnTapBackground;
+  final Color? marqueeFillColor;
+  final Color? marqueeBorderColor;
+  final double marqueeBorderWidth;
 
   @override
   State<YDesktopGroupedGridView<T>> createState() => _YDesktopGroupedGridViewState<T>();
@@ -79,6 +89,10 @@ class _YDesktopGroupedGridViewState<T> extends State<YDesktopGroupedGridView<T>>
     return YDesktopSelectionRegion(
       controller: widget.controller,
       scrollController: widget.scrollController,
+      enableClearSelectionOnTapBackground: widget.enableClearSelectionOnTapBackground,
+      marqueeFillColor: widget.marqueeFillColor,
+      marqueeBorderColor: widget.marqueeBorderColor,
+      marqueeBorderWidth: widget.marqueeBorderWidth,
       customSelectionCalculator: (rectInContent) {
         final Set<int> indices = {};
         final box = context.findRenderObject() as RenderBox?;
@@ -171,32 +185,19 @@ class _YDesktopGroupedGridViewState<T> extends State<YDesktopGroupedGridView<T>>
                     final globalIndex = _getGlobalIndex(group, index);
                     final isSelected = widget.controller.isSelected(globalIndex);
                     
-                    void handlePointerDown(bool isSecondary) {
+                    void triggerSelection({bool isSecondary = false}) {
                       widget.controller.handleTap(globalIndex, isSecondary: isSecondary);
                     }
 
                     return MetaData(
                       metaData: YSelectionData(index: globalIndex, extra: item),
                       behavior: HitTestBehavior.translucent,
-                      child: Listener(
-                        onPointerDown: (event) {
-                          final isSecondary = event.buttons == kSecondaryMouseButton;
-                          handlePointerDown(isSecondary);
-                        },
-                        child: GestureDetector(
-                          onTap: () {}, // 捕获点击，防止事件冒泡到 Region 触发清空
-                          behavior: HitTestBehavior.opaque,
-                          child: Container(
-                            color: Colors.transparent,
-                            child: widget.itemBuilder(
-                              context, 
-                              item, 
-                              globalIndex, 
-                              isSelected,
-                              handlePointerDown,
-                            ),
-                          ),
-                        ),
+                      child: widget.itemBuilder(
+                        context, 
+                        item, 
+                        globalIndex, 
+                        isSelected,
+                        triggerSelection,
                       ),
                     );
                   },

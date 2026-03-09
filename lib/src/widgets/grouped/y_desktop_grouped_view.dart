@@ -22,7 +22,7 @@ class YDesktopGroupedListView<T> extends StatefulWidget {
     T item, 
     int index, 
     bool isSelected,
-    void Function(bool isSecondary) onPointerDown,
+    void Function({bool isSecondary}) triggerSelection,
   )? itemBuilder;
 
   const YDesktopGroupedListView({
@@ -35,7 +35,23 @@ class YDesktopGroupedListView<T> extends StatefulWidget {
     this.itemHeight = 32.0,
     this.groupHeaderHeight = 40.0,
     this.groupHeaderBuilder,
+    this.enableClearSelectionOnTapBackground = true,
+    this.marqueeFillColor,
+    this.marqueeBorderColor,
+    this.marqueeBorderWidth = 1.0,
+    this.itemSelectedColor,
+    this.itemBorderRadius,
   });
+
+  /// --- 选框样式 ---
+  final bool enableClearSelectionOnTapBackground;
+  final Color? marqueeFillColor;
+  final Color? marqueeBorderColor;
+  final double marqueeBorderWidth;
+
+  /// --- 默认项样式 ---
+  final Color? itemSelectedColor;
+  final BorderRadius? itemBorderRadius;
 
   @override
   State<YDesktopGroupedListView<T>> createState() => _YDesktopGroupedListViewState<T>();
@@ -84,6 +100,10 @@ class _YDesktopGroupedListViewState<T> extends State<YDesktopGroupedListView<T>>
     return YDesktopSelectionRegion(
       controller: widget.controller,
       scrollController: widget.scrollController,
+      enableClearSelectionOnTapBackground: widget.enableClearSelectionOnTapBackground,
+      marqueeFillColor: widget.marqueeFillColor,
+      marqueeBorderColor: widget.marqueeBorderColor,
+      marqueeBorderWidth: widget.marqueeBorderWidth,
       customSelectionCalculator: (rectInContent) {
         final Set<int> indices = {};
         double currentY = 0;
@@ -130,7 +150,7 @@ class _YDesktopGroupedListViewState<T> extends State<YDesktopGroupedListView<T>>
           final isSelected = widget.controller.isSelected(itemIndex);
           final item = entry.data as T;
 
-          void handlePointerDown(bool isSecondary) {
+          void triggerSelection({bool isSecondary = false}) {
             widget.controller.handleTap(itemIndex, isSecondary: isSecondary);
           }
 
@@ -143,7 +163,7 @@ class _YDesktopGroupedListViewState<T> extends State<YDesktopGroupedListView<T>>
                 item,
                 itemIndex,
                 isSelected,
-                handlePointerDown,
+                triggerSelection,
               ),
             );
           }
@@ -154,7 +174,9 @@ class _YDesktopGroupedListViewState<T> extends State<YDesktopGroupedListView<T>>
             columns: widget.columns,
             height: widget.itemHeight,
             selected: isSelected,
-            onPointerDown: handlePointerDown,
+            selectedColor: widget.itemSelectedColor,
+            borderRadius: widget.itemBorderRadius,
+            onPointerDown: (isSecondary) => triggerSelection(isSecondary: isSecondary),
           );
         },
       ),

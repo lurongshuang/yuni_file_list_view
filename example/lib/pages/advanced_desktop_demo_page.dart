@@ -100,11 +100,24 @@ class _AdvancedDesktopDemoPageState extends State<AdvancedDesktopDemoPage> {
           scrollController: _scrollController,
           showHeader: _showHeader,
           columns: _buildColumns(),
+          // 演示：全局样式自定义
+          marqueeFillColor: Colors.blue.withValues(alpha: 0.1),
+          marqueeBorderColor: Colors.blue.withValues(alpha: 0.5),
+          itemSelectedColor: Colors.blue.withValues(alpha: 0.05),
+          itemBorderRadius: BorderRadius.circular(2),
+          headerDividerColor: Colors.blue.withValues(alpha: 0.2),
+          headerDividerWidth: 1.0,
           // 演示：完全外部构建 Item
-          itemBuilder: (context, item, index, isSelected, onPointerDown) {
+          itemBuilder: (context, item, index, isSelected, triggerSelection) {
             return GestureDetector(
-              onTap: () {}, // 阻止冒泡
-              onSecondaryTap: () => onPointerDown(true),
+              onTap: () => triggerSelection(), 
+              onSecondaryTapDown: (details) {
+                // 演示：业务逻辑弹出菜单
+                _showContextMenu(context, details.globalPosition, item);
+                // 同时触发选中逻辑（桌面端习惯）
+                triggerSelection(isSecondary: true);
+              },
+              behavior: HitTestBehavior.opaque,
               child: Container(
                 height: 32,
                 color: isSelected ? Colors.blue.withValues(alpha: 0.1) : Colors.transparent,
@@ -130,8 +143,8 @@ class _AdvancedDesktopDemoPageState extends State<AdvancedDesktopDemoPage> {
           crossAxisCount: _isResponsive ? 0 : 6,
           maxCrossAxisExtent: _isResponsive ? 140.0 : null,
           childAspectRatio: 0.8,
-          itemBuilder: (context, item, index, isSelected, onPointerDown) {
-            return _buildGridItem(item, isSelected, onPointerDown);
+          itemBuilder: (context, item, index, isSelected, triggerSelection) {
+            return _buildGridItem(item, isSelected, triggerSelection);
           },
         );
       case ViewMode.grouped:
@@ -157,42 +170,66 @@ class _AdvancedDesktopDemoPageState extends State<AdvancedDesktopDemoPage> {
           crossAxisCount: _isResponsive ? 0 : 6,
           maxCrossAxisExtent: _isResponsive ? 140.0 : null,
           childAspectRatio: 0.8,
-          itemBuilder: (context, item, index, isSelected, onPointerDown) {
-            return _buildGridItem(item, isSelected, onPointerDown);
+          itemBuilder: (context, item, index, isSelected, triggerSelection) {
+            return _buildGridItem(item, isSelected, triggerSelection);
           },
         );
     }
   }
 
-  Widget _buildGridItem(YFileItem item, bool isSelected, void Function(bool isSecondary) onPointerDown) {
-    return Container(
-      decoration: BoxDecoration(
-        color: isSelected ? Colors.blue.withValues(alpha: 0.1) : Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: isSelected ? Colors.blue : Colors.transparent,
-          width: 1,
+  Widget _buildGridItem(YFileItem item, bool isSelected, void Function({bool isSecondary}) triggerSelection) {
+    return GestureDetector(
+      onTap: () => triggerSelection(), 
+      onSecondaryTapDown: (details) {
+        _showContextMenu(context, details.globalPosition, item);
+        triggerSelection(isSecondary: true);
+      },
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.blue.withValues(alpha: 0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected ? Colors.blue : Colors.transparent,
+            width: 1,
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(_getIcon(item.type), size: 48, color: Colors.blue),
+            const SizedBox(height: 8),
+            Text(
+              item.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 12),
+            ),
+          ],
         ),
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // 可以在这里演示点击不同区域触发选择
-          GestureDetector(
-            onSecondaryTap: () => onPointerDown(true),
-            child: Icon(_getIcon(item.type), size: 48, color: Colors.blue),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            item.name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 12),
-          ),
-        ],
-      ),
     );
+  }
+
+  void _showContextMenu(BuildContext context, Offset position, YFileItem item) {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    showMenu<String>(
+      context: context,
+      position: RelativeRect.fromLTRB(position.dx, position.dy, position.dx, position.dy),
+      items: <PopupMenuEntry<String>>[
+        PopupMenuItem<String>(value: 'open', child: Text('打开 ${item.name}')),
+        const PopupMenuDivider(),
+        const PopupMenuItem<String>(value: 'rename', child: Text('重命名')),
+        const PopupMenuItem<String>(value: 'delete', child: Text('删除', style: TextStyle(color: Colors.red))),
+      ],
+    ).then((value) {
+      if (value != null) {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(content: Text('点击了: $value'), duration: const Duration(seconds: 1)),
+        );
+      }
+    });
   }
 
   List<YDesktopColumn<YFileItem>> _buildColumns() {
