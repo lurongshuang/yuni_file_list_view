@@ -15,6 +15,7 @@
 
 * 🚀 **极速渲染架构**：告别市面上常见的“一组一个 SliverGrid / SliverList”的灾难级坑点。针对分组宫格场景，本库内置展平算法，千组万级数据最后均被转换为一行行高度统一的 1D Row 渲染，真正发挥 Flutter 懒加载的威力。
 * 📱 **三种主流视图解耦呈现**：支持纯宫格 (Grid)、纯纵向列表 (List)、以及支持动态混排切换的 分组列表 (Grouped)。
+* 💻 **桌面端专属组件**：提供桌面端优化的文件列表和网格组件，支持桌面端特有的选择交互和布局。
 * ☑️ **相册级高级交互接管**：内置 `YDragSelectRegion` 和 `YDragSelectElement`。套上它们，你的照片墙或文件列表瞬间获得“长按后手指不仅起，继续滑动直接疯狂多选，滑出版面自动上下滚”的高级体验。而且利用 `ValueNotifier` 定点刷新包裹，全选万张图也丝滑不掉帧。
 * 🎨 **无侵入的纯粹骨架**：配置项（Config）彻底剔除色彩、形状等强 UI 属性（只留必要的 padding & spacing 布局要素）。每一格的卡片、每一条分隔线完全向用户开放 required Builder 权限，真正做到“框架做性能与骨架，皮肤交给你”。
 * 📏 **智能响应式列数**：内置 `SliverLayoutBuilder` 自动监听容器宽度。配合最小单元横宽 (`minItemWidth`)，组件自动在手机/平板/桌面端算出最佳横向展示列数，完美支持转屏与分屏。
@@ -27,7 +28,7 @@
 
 ```yaml
 dependencies:
-  yuni_file_list_view: ^0.0.1
+  yuni_file_list_view: ^0.0.3
 ```
 
 导入核心包：
@@ -132,6 +133,92 @@ YFileGridView<MyFileData>(
   itemBuilder: (context, item, index) {
     return FilePanelCard(item: item);
   },
+)
+```
+
+### 4. 桌面端专属组件
+**适用场景**：桌面应用中的文件管理、媒体浏览等场景，提供符合桌面端操作习惯的交互体验。
+
+#### 4.1 桌面端文件列表 `YDesktopFileListView`
+```dart
+YDesktopFileListView<MyFileData>(
+  items: files,
+  onItemTap: (item, index) {
+    // 处理点击事件
+  },
+  onItemSecondaryTap: (item, index) {
+    // 处理右键点击事件
+  },
+  itemBuilder: (context, item, index, selected) {
+    return YDesktopFileItem(
+      item: item,
+      selected: selected,
+      onTap: () => handleTap(item),
+    );
+  },
+)
+```
+
+#### 4.2 桌面端文件网格 `YDesktopFileGridView`
+```dart
+YDesktopFileGridView<MyFileData>(
+  items: files,
+  config: YFileGridConfig(
+    minItemWidth: 150,
+    crossAxisSpacing: 8,
+    mainAxisSpacing: 8,
+  ),
+  itemBuilder: (context, item, index, selected) {
+    return FileGridItem(
+      item: item,
+      selected: selected,
+    );
+  },
+)
+```
+
+#### 4.3 桌面端分组视图 `YDesktopGroupedView` & `YDesktopGroupedGridView`
+```dart
+YDesktopGroupedView<MyFileData>(
+  groups: groups,
+  headerBuilder: (context, group, groupIndex) {
+    return YDesktopFileHeader(title: group.groupTitle);
+  },
+  itemBuilder: (context, group, item, groupIndex, itemIndex, selected) {
+    return YDesktopFileItem(
+      item: item,
+      selected: selected,
+    );
+  },
+)
+```
+
+### 5. 桌面端选择控制器 `YDesktopSelectionController`
+**适用场景**：桌面端应用中需要复杂选择逻辑的场景，如批量操作文件、多选编辑等。
+
+```dart
+final selectionController = YDesktopSelectionController<MyFileData>();
+
+// 在组件中使用
+YDesktopSelectionRegion<MyFileData>(
+  controller: selectionController,
+  child: YDesktopFileListView(
+    items: files,
+    selectedItems: selectionController.selectedItems,
+    onItemTap: (item, index) {
+      selectionController.toggleSelection(item);
+    },
+    // ...
+  ),
+)
+
+// 批量操作
+ElevatedButton(
+  onPressed: () {
+    final selected = selectionController.selectedItems;
+    // 处理选中的项目
+  },
+  child: Text('处理选中项目'),
 )
 ```
 
