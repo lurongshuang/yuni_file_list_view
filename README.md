@@ -17,7 +17,7 @@
 * 📱 **三种主流视图解耦呈现**：支持纯宫格 (Grid)、纯纵向列表 (List)、以及支持动态混排切换的 分组列表 (Grouped)。
 * ☑️ **相册级高级交互接管**：内置 `YDragSelectRegion` 和 `YDragSelectElement`。套上它们，你的照片墙或文件列表瞬间获得“长按后手指不仅起，继续滑动直接疯狂多选，滑出版面自动上下滚”的高级体验。而且利用 `ValueNotifier` 定点刷新包裹，全选万张图也丝滑不掉帧。
 * 🎨 **无侵入的纯粹骨架**：配置项（Config）彻底剔除色彩、形状等强 UI 属性（只留必要的 padding & spacing 布局要素）。每一格的卡片、每一条分隔线完全向用户开放 required Builder 权限，真正做到“框架做性能与骨架，皮肤交给你”。
-* 📏 **智能响应式列数**：支持 `crossAxisCount = 0` 配置，组件底层结合 `LayoutBuilder` 与最小单元横宽 (`minItemWidth`)，自动在手机/平板/桌面端算出最佳横向展示列数。
+* 📏 **智能响应式列数**：内置 `SliverLayoutBuilder` 自动监听容器宽度。配合最小单元横宽 (`minItemWidth`)，组件自动在手机/平板/桌面端算出最佳横向展示列数，完美支持转屏与分屏。
 
 ---
 
@@ -40,26 +40,27 @@ import 'package:yuni_file_list_view/yuni_file_list_view.dart';
 
 ## 核心组件与使用场景
 
-### 1. 全能分组列表 `YFileGroupedListView` & `buildSliverYFileGroupedListView`
+### 1. 全能分组列表 `YFileGroupedListView` & `SliverYFileGroupedList`
 **适用场景**：仿微信相册按日/月归档、文档管理中按文件来源/时间/格式建立文件夹树进行多轨展现。
 
 支持在初始化或动态切换中无缝修改 `config.mode`（`YFileGroupedMode.grid` 与 `YFileGroupedMode.list`）。
 
-> 💡 **最佳性能指南**：如果整个页面不止这个列表，建议不要直接使用 `YFileGroupedListView`（因为它自带 ScrollView），而是直接在你的 `CustomScrollView > slivers` 阵列里展开使用 `...buildSliverYFileGroupedListView()`！
+> 💡 **最佳性能指南**：如果整个页面不止这个列表，建议不要直接使用 `YFileGroupedListView`（因为它自带 ScrollView），而是直接在你的 `CustomScrollView > slivers` 阵列里放置 `SliverYFileGroupedList` 组件！它内部集成了宽度检测，能自动适配网格列数。
 
 ```dart
-// 在 CustomScrollView 中使用
+// 在 CustomScrollView 中使用标准 Sliver 组件
 CustomScrollView(
   slivers: [
-    ...buildSliverYFileGroupedListView<MyFileData>(
+    SliverYFileGroupedList<MyFileData>(
       groups: myGroups, // List<YFileGroup<MyFileData>>
       config: YFileGroupedConfig(
         mode: YFileGroupedMode.grid, // 随时动态 setState 切换为 list 模式
         gridConfig: YFileGridConfig(
-          crossAxisCount: 4,               // 一行四列
+          // crossAxisCount: 4,      // 可选：固定列数
+          minItemWidth: 100,         // 推荐：启用自适应宽度推算
           crossAxisSpacing: 2.0,
           mainAxisSpacing: 2.0,
-          childAspectRatio: 1.0,           // 正方形图片卡
+          childAspectRatio: 1.0,
         ),
       ),
       // 必须亲自指派分组标题的外观
@@ -98,7 +99,7 @@ YDragSelectRegion(
   child: CustomScrollView(
     controller: _scrollController,
     slivers: [
-      ...buildSliverYFileGroupedListView<MyFileData>(
+      SliverYFileGroupedList<MyFileData>(
         // ...
         itemBuilder: (context, group, item, groupIndex, itemIndex) {
           int globalIndex = calculateGlobalIndex(); // 把组序化为贯通全盘的一维序号
@@ -136,12 +137,10 @@ YFileGridView<MyFileData>(
 
 ---
 
-## 最佳实践：如何根治超大相册与多选造成的卡屏？
-
 在这个组件被发掘出“终极大一统展平防挂载 SliverList”算法之前，大列表中调用 `setState` 会导致所有渲染子对象全部自毁并触发无尽的重建与越界计算。
 
 使用本库进行上万+图片多选时，**切记千万不要** 在 `onDragSelectUpdate` 里面触发全局大页面的 `setState`。
-本库在 `Example` 工程的 `PhotoGalleryDemoPage` 中为您预留了神仙级别的标准范例解答，核心就是两点：
+本库在 `Example` 工程的 `PhotoGalleryDemoPage` 中为您预留了神仙级别的标准范例解答，它不仅包含了 **O(1) 级别的吸顶索引检索算法**，核心还包括两点：
 1. **数据与坐标分离计算体系**。
 2. **`_SelectionStatusWrapper` 配合 `ValueNotifier` 进行 `O(1)` 的局部精确更新**，它确保如果你的手指滑过 100 张图时，引擎只给这状态发生改变的 100 张图片重上油漆，其余一万张图连理都不理你。
 

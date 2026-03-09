@@ -6,10 +6,10 @@ import 'sliver_y_file_grouped_list_view.dart';
 
 /// 分组文件列表（可独立滚动，支持 header 吸顶）
 ///
-/// 内部使用 [CustomScrollView] + [buildSliverYFileGroupedListView] 实现。
-/// 吸顶效果通过内置 [SliverPersistentHeader] 实现，其内容会随滚动实时更新。
+/// 内部使用 [CustomScrollView] + [SliverYFileGroupedList] 实现。
+/// 吸顶效果通过内置 [SliverPersistentHeader] 实现，其内容会随滚动实时更新（O(1) 检索）。
 ///
-/// 需与其他 Sliver 组合时请直接使用 [buildSliverYFileGroupedListView]。
+/// 需与其他 Sliver 组合时请直接使用 [SliverYFileGroupedList]。
 ///
 /// ```dart
 /// YFileGroupedListView<MyFile>(

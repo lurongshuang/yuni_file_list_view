@@ -11,7 +11,9 @@ import '../../utils/y_grid_column_calculator.dart';
 /// 当 [config.pinnedHeader] 为 true 时：
 /// - 第 0 组的 in-list title 不渲染，由吸顶 header 代替
 /// - 第 1+ 组的 in-list title 正常渲染，并带有 GlobalKey
-/// - 吸顶 header 通过读取实际渲染位置来判断当前分组，精度极高。
+/// - 吸顶 header 通过读取实际渲染位置来判断当前分组。
+/// - **[高性能]**：内置 O(1) 级别的邻居节点增量检索算法，即便在万级分组中高频滑动也绝不掉帧。
+/// - **[自适应]**：内部封装 `SliverLayoutBuilder`，自动适配屏幕宽度与网格列数，支持转屏。
 class SliverYFileGroupedList<T> extends StatelessWidget {
   final List<YFileGroup<T>> groups;
   final YFileGroupHeaderBuilder<T> headerBuilder;

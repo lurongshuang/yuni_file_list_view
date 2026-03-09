@@ -30,8 +30,10 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
   late final List<YFileGroup<YFileItem>> _monthGroups;
   late final List<YFileGroup<YFileItem>> _dayGroups;
 
-  // 全局展示集：由于不同维度的物理数量和时序一样，一套数据够了
-  late final List<YFileItem> _globalFlatItems;
+  // 缓存 3 维度的展平数据，用于选中的索引映射
+  late final List<YFileItem> _yearFlat;
+  late final List<YFileItem> _monthFlat;
+  late final List<YFileItem> _dayFlat;
 
   late final List<int> _yearOffsets;
   late final List<int> _monthOffsets;
@@ -69,14 +71,22 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
     if (dim == 'year') {
       _yearGroups = groups;
       _yearOffsets = groupOffsets;
-      _globalFlatItems = flatItems; // 只需赋任一维度生成后的完整数组即可
+      _yearFlat = flatItems;
     } else if (dim == 'month') {
       _monthGroups = groups;
       _monthOffsets = groupOffsets;
+      _monthFlat = flatItems;
     } else if (dim == 'day') {
       _dayGroups = groups;
       _dayOffsets = groupOffsets;
+      _dayFlat = flatItems;
     }
+  }
+
+  List<YFileItem> get _currentFlatItems {
+    if (_dimension == 'year') return _yearFlat;
+    if (_dimension == 'month') return _monthFlat;
+    return _dayFlat;
   }
 
   void _toggleSelection(String id) {
@@ -105,8 +115,9 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
   }
 
   void _onDragSelectStart(int index) {
-    if (index < 0 || index >= _globalFlatItems.length) return;
-    final id = _globalFlatItems[index].id;
+    final items = _currentFlatItems;
+    if (index < 0 || index >= items.length) return;
+    final id = items[index].id;
 
     _dragStartSelectedIds = Set.from(_selectedIds);
     _isSelecting = !_selectedIds.contains(id);
@@ -121,9 +132,9 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
   }
 
   void _onDragSelectUpdate(int startIndex, int currentIndex) {
-    if (startIndex < 0 || currentIndex < 0 || _globalFlatItems.isEmpty) return;
-    if (startIndex >= _globalFlatItems.length ||
-        currentIndex >= _globalFlatItems.length) {
+    final items = _currentFlatItems;
+    if (startIndex < 0 || currentIndex < 0 || items.isEmpty) return;
+    if (startIndex >= items.length || currentIndex >= items.length) {
       return;
     }
 
@@ -133,7 +144,7 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
     final Set<String> newSelection = Set.from(_dragStartSelectedIds);
 
     for (int i = minIdx; i <= maxIdx; i++) {
-      final id = _globalFlatItems[i].id;
+      final id = items[i].id;
       if (_isSelecting) {
         newSelection.add(id);
       } else {
