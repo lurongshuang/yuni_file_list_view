@@ -4,6 +4,8 @@ import 'list_demo_page.dart';
 import 'grouped_list_demo_page.dart';
 import 'sliver_demo_page.dart';
 import 'photo_gallery_demo_page.dart';
+import 'desktop_list_demo_page.dart';
+import 'advanced_desktop_demo_page.dart';
 
 class DemoHomePage extends StatelessWidget {
   const DemoHomePage({super.key});
@@ -62,6 +64,24 @@ class DemoHomePage extends StatelessWidget {
             icon: Icons.auto_awesome_motion,
             color: Colors.pinkAccent,
             page: const PhotoGalleryDemoPage(),
+          ),
+          const SizedBox(height: 16),
+          _buildCard(
+            context,
+            title: '7. 桌面端列表 (Desktop)',
+            subtitle: '类 Finder 列表，支持鼠标框选、修饰键多选',
+            icon: Icons.personal_video,
+            color: Colors.indigo,
+            page: const DesktopListDemoPage(),
+          ),
+          const SizedBox(height: 16),
+          _buildCard(
+            context,
+            title: '8. 桌面端列表 (高级)',
+            subtitle: '支持列表/宫格/分组切换，自定义表头',
+            icon: Icons.dashboard_customize,
+            color: Colors.deepOrange,
+            page: const AdvancedDesktopDemoPage(),
           ),
         ],
       ),

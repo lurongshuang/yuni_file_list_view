@@ -36,3 +36,15 @@ export 'src/widgets/grouped/y_file_grouped_list_view.dart';
 
 // ─── 高级交互能力 ─────────────────────────────────────────────────────────────
 export 'src/widgets/interaction/y_drag_select_region.dart';
+export 'src/widgets/interaction/y_desktop_selection_controller.dart';
+export 'src/widgets/interaction/y_desktop_selection_region.dart';
+
+// ─── 桌面端列表 ────────────────────────────────────────────────────────────────
+export 'src/config/y_desktop_column.dart';
+export 'src/widgets/list/y_desktop_file_list_view.dart';
+export 'src/widgets/list/y_desktop_file_header.dart';
+export 'src/widgets/list/y_desktop_file_item.dart';
+export 'src/widgets/grid/y_desktop_file_grid_view.dart';
+export 'src/widgets/grouped/y_desktop_grouped_view.dart';
+export 'src/widgets/grouped/y_desktop_grouped_grid_view.dart';
+export 'src/model/y_selection_data.dart';

@@ -46,7 +46,7 @@ class DemoData {
         .toList();
   }
 
-  static final List<YFileItem> listItems = List.generate(40, (i) {
+  static final List<YFileItem> listItems = List.generate(1040, (i) {
     final types = YFileType.values;
     final type = types[i % types.length];
     return YFileItem(
