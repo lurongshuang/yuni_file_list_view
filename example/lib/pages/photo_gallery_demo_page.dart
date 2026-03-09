@@ -307,7 +307,7 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
               ),
             ),
           ),
-          ...buildSliverYFileGroupedListView<YFileItem>(
+          SliverYFileGroupedList<YFileItem>(
             groups: groups,
             config: YFileGroupedConfig(
               mode: _mode,

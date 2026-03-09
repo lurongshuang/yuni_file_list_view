@@ -46,30 +46,19 @@ class YFileGroupedListView<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final gridConfig = config.gridConfig;
-        final availableWidth = constraints.maxWidth -
-            (config.mode == YFileGroupedMode.grid
-                ? gridConfig.padding.horizontal
-                : config.listConfig.padding.horizontal);
-
-        return CustomScrollView(
-          controller: controller,
-          reverse: reverse,
-          physics: physics,
-          shrinkWrap: shrinkWrap,
-          slivers: [
-            ...buildSliverYFileGroupedListView<T>(
-              groups: groups,
-              headerBuilder: headerBuilder,
-              itemBuilder: itemBuilder,
-              config: config,
-              availableWidth: availableWidth,
-            ),
-          ],
-        );
-      },
+    return CustomScrollView(
+      controller: controller,
+      reverse: reverse,
+      physics: physics,
+      shrinkWrap: shrinkWrap,
+      slivers: [
+        SliverYFileGroupedList<T>(
+          groups: groups,
+          headerBuilder: headerBuilder,
+          itemBuilder: itemBuilder,
+          config: config,
+        ),
+      ],
     );
   }
 }

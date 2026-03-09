@@ -34,8 +34,8 @@ class SliverDemoPage extends StatelessWidget {
               ),
             ),
           ),
-          // 展开返回的包裹分组的 MultiSliver 列表
-          ...buildSliverYFileGroupedListView<YFileItem>(
+          // 新版原生组件化，自适应包裹分组的 Sliver
+          SliverYFileGroupedList<YFileItem>(
             groups: DemoData.groupedItems.take(2).toList(),
             config: YFileGroupedConfig(
               pinnedHeader: true,
@@ -61,7 +61,7 @@ class SliverDemoPage extends StatelessWidget {
               ),
             ),
           ),
-          ...buildSliverYFileGroupedListView<YFileItem>(
+          SliverYFileGroupedList<YFileItem>(
             groups: DemoData.groupedItems.skip(2).toList(),
             config: const YFileGroupedConfig(
               mode: YFileGroupedMode.list,
