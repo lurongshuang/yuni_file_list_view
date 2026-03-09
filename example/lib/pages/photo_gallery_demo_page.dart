@@ -20,35 +20,62 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
   YFileGroupedMode _mode = YFileGroupedMode.grid;
   final Set<String> _selectedIds = {};
 
-  List<YFileGroup<YFileItem>> _groups = [];
-  List<YFileItem> _flatItems = [];
-  List<int> _groupOffsets = [];
+  // 独立控制器，保留各自滑动位置
+  final ScrollController _yearScrollCtrl = ScrollController();
+  final ScrollController _monthScrollCtrl = ScrollController();
+  final ScrollController _dayScrollCtrl = ScrollController();
+
+  // 缓存 3 维度的数据
+  late final List<YFileGroup<YFileItem>> _yearGroups;
+  late final List<YFileGroup<YFileItem>> _monthGroups;
+  late final List<YFileGroup<YFileItem>> _dayGroups;
+
+  // 全局展示集：由于不同维度的物理数量和时序一样，一套数据够了
+  late final List<YFileItem> _globalFlatItems;
+
+  late final List<int> _yearOffsets;
+  late final List<int> _monthOffsets;
+  late final List<int> _dayOffsets;
 
   Set<String> _dragStartSelectedIds = {};
   bool _isSelecting = true;
 
-  final ScrollController _scrollController = ScrollController();
-
   @override
   void initState() {
     super.initState();
-    _updateData();
+    _initDimensionData('year');
+    _initDimensionData('month');
+    _initDimensionData('day');
   }
 
   @override
   void dispose() {
-    _scrollController.dispose();
+    _yearScrollCtrl.dispose();
+    _monthScrollCtrl.dispose();
+    _dayScrollCtrl.dispose();
     super.dispose();
   }
 
-  void _updateData() {
-    _groups = DemoData.getGroupsByDimension(_dimension);
-    _flatItems = _groups.expand((g) => g.items).toList();
-    _groupOffsets = [];
+  void _initDimensionData(String dim) {
+    final groups = DemoData.getGroupsByDimension(dim);
+    final flatItems = groups.expand((g) => g.items).toList();
+    final groupOffsets = <int>[];
     int offset = 0;
-    for (var g in _groups) {
-      _groupOffsets.add(offset);
+    for (var g in groups) {
+      groupOffsets.add(offset);
       offset += g.items.length;
+    }
+
+    if (dim == 'year') {
+      _yearGroups = groups;
+      _yearOffsets = groupOffsets;
+      _globalFlatItems = flatItems; // 只需赋任一维度生成后的完整数组即可
+    } else if (dim == 'month') {
+      _monthGroups = groups;
+      _monthOffsets = groupOffsets;
+    } else if (dim == 'day') {
+      _dayGroups = groups;
+      _dayOffsets = groupOffsets;
     }
   }
 
@@ -66,7 +93,6 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
     if (_dimension == dim) return;
     setState(() {
       _dimension = dim;
-      _updateData();
     });
   }
 
@@ -79,8 +105,8 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
   }
 
   void _onDragSelectStart(int index) {
-    if (index < 0 || index >= _flatItems.length) return;
-    final id = _flatItems[index].id;
+    if (index < 0 || index >= _globalFlatItems.length) return;
+    final id = _globalFlatItems[index].id;
 
     _dragStartSelectedIds = Set.from(_selectedIds);
     _isSelecting = !_selectedIds.contains(id);
@@ -95,9 +121,11 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
   }
 
   void _onDragSelectUpdate(int startIndex, int currentIndex) {
-    if (startIndex < 0 || currentIndex < 0 || _flatItems.isEmpty) return;
-    if (startIndex >= _flatItems.length || currentIndex >= _flatItems.length)
+    if (startIndex < 0 || currentIndex < 0 || _globalFlatItems.isEmpty) return;
+    if (startIndex >= _globalFlatItems.length ||
+        currentIndex >= _globalFlatItems.length) {
       return;
+    }
 
     final int minIdx = startIndex < currentIndex ? startIndex : currentIndex;
     final int maxIdx = startIndex > currentIndex ? startIndex : currentIndex;
@@ -105,7 +133,7 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
     final Set<String> newSelection = Set.from(_dragStartSelectedIds);
 
     for (int i = minIdx; i <= maxIdx; i++) {
-      final id = _flatItems[i].id;
+      final id = _globalFlatItems[i].id;
       if (_isSelecting) {
         newSelection.add(id);
       } else {
@@ -124,9 +152,9 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
 
   @override
   Widget build(BuildContext context) {
-    int crossAxisCount = 4;
-    if (_dimension == 'year') crossAxisCount = 5;
-    if (_dimension == 'day') crossAxisCount = 3;
+    int dimIndex = 0;
+    if (_dimension == 'month') dimIndex = 1;
+    if (_dimension == 'day') dimIndex = 2;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -141,145 +169,13 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
               ),
             ),
           ),
-          YDragSelectRegion(
-            scrollController: _scrollController,
-            onDragSelectStart: (idx) => _onDragSelectStart(idx),
-            onDragSelectUpdate: (start, current) =>
-                _onDragSelectUpdate(start, current),
-            child: CustomScrollView(
-              key: const PageStorageKey('gallery_shared_scroll_position'),
-              controller: _scrollController,
-              physics: const AlwaysScrollableScrollPhysics(),
-              slivers: [
-                SliverAppBar(
-                  leading: IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new,
-                        size: 20, color: Colors.black87),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                  actions: [
-                    IconButton(
-                      icon: Icon(
-                          _mode == YFileGroupedMode.grid
-                              ? Icons.format_list_bulleted
-                              : Icons.grid_view,
-                          color: Colors.blue),
-                      tooltip:
-                          _mode == YFileGroupedMode.grid ? '切换至列表' : '切换至宫格',
-                      onPressed: _toggleMode,
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.more_horiz, color: Colors.black87),
-                      onPressed: () {},
-                    ),
-                  ],
-                  centerTitle: false,
-                  title: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('2025年春节',
-                          style: TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 18,
-                              color: Colors.black)),
-                      const SizedBox(height: 2),
-                      Text(
-                        '3012张图片  124个视频  80个其他文件',
-                        style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
-                            fontWeight: FontWeight.normal),
-                      ),
-                    ],
-                  ),
-                  floating: true,
-                  pinned: true,
-                  backgroundColor: Colors.white.withValues(alpha: 0.8),
-                  elevation: 0,
-                  scrolledUnderElevation: 0,
-                  flexibleSpace: ClipRect(
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                      child: Container(color: Colors.transparent),
-                    ),
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-                    child: Row(
-                      children: [
-                        _buildFilterChip('上传者'),
-                        _buildFilterChip('点赞'),
-                        _buildFilterChip('标签'),
-                        _buildFilterChip('机型'),
-                        const SizedBox(width: 12),
-                        Icon(Icons.tune, color: Colors.grey.shade400, size: 20),
-                      ],
-                    ),
-                  ),
-                ),
-                ...buildSliverYFileGroupedListView<YFileItem>(
-                  groups: _groups,
-                  config: YFileGroupedConfig(
-                    mode: _mode,
-                    gridConfig: YFileGridConfig(
-                      crossAxisCount: crossAxisCount,
-                      crossAxisSpacing: 1.0,
-                      mainAxisSpacing: 1.0,
-                      padding: EdgeInsets.zero,
-                    ),
-                    listConfig: const YFileListConfig(
-                      padding: EdgeInsets.zero,
-                    ),
-                  ),
-                  headerBuilder: (context, group, index) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      alignment: Alignment.centerLeft,
-                      color: Colors.white,
-                      child: Text(
-                        group.groupTitle,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.black87,
-                          letterSpacing: -0.4,
-                        ),
-                      ),
-                    );
-                  },
-                  itemBuilder: (context, group, item, groupIndex, itemIndex) {
-                    final isSelected = _selectedIds.contains(item.id);
-                    int globalIndex = _groupOffsets[groupIndex] + itemIndex;
-
-                    Widget child;
-                    if (_mode == YFileGroupedMode.grid) {
-                      child = YFileGridItem(
-                        item: item,
-                        selected: isSelected,
-                        onTap: () => _toggleSelection(item.id),
-                      );
-                    } else {
-                      child = YFileListItem(
-                        item: item,
-                        config: const YFileListUIConfig(
-                            showDivider: true, dividerIndent: 76),
-                        selected: isSelected,
-                        onTap: () => _toggleSelection(item.id),
-                      );
-                    }
-
-                    return YDragSelectElement(
-                      index: globalIndex,
-                      child: child,
-                    );
-                  },
-                ),
-                const SliverToBoxAdapter(child: SizedBox(height: 140)),
-              ],
-            ),
+          IndexedStack(
+            index: dimIndex,
+            children: [
+              _buildGalleryView('year', 5, _yearScrollCtrl, _yearGroups, _yearOffsets),
+              _buildGalleryView('month', 4, _monthScrollCtrl, _monthGroups, _monthOffsets),
+              _buildGalleryView('day', 3, _dayScrollCtrl, _dayGroups, _dayOffsets),
+            ],
           ),
           Positioned(
             bottom: 84,
@@ -321,6 +217,158 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGalleryView(
+    String dim,
+    int crossAxisCount,
+    ScrollController scrollCtrl,
+    List<YFileGroup<YFileItem>> groups,
+    List<int> groupOffsets,
+  ) {
+    return YDragSelectRegion(
+      scrollController: scrollCtrl,
+      onDragSelectStart: (idx) => _onDragSelectStart(idx),
+      onDragSelectUpdate: (start, current) =>
+          _onDragSelectUpdate(start, current),
+      child: CustomScrollView(
+        key: PageStorageKey('gallery_view_$dim'),
+        controller: scrollCtrl,
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverAppBar(
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new,
+                  size: 20, color: Colors.black87),
+              onPressed: () => Navigator.pop(context),
+            ),
+            actions: [
+              IconButton(
+                icon: Icon(
+                    _mode == YFileGroupedMode.grid
+                        ? Icons.format_list_bulleted
+                        : Icons.grid_view,
+                    color: Colors.blue),
+                tooltip: _mode == YFileGroupedMode.grid ? '切换至列表' : '切换至宫格',
+                onPressed: _toggleMode,
+              ),
+              IconButton(
+                icon: const Icon(Icons.more_horiz, color: Colors.black87),
+                onPressed: () {},
+              ),
+            ],
+            centerTitle: false,
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('2025年春节',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 18,
+                        color: Colors.black)),
+                const SizedBox(height: 2),
+                Text(
+                  '3012张图片  124个视频  80个其他文件',
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade600,
+                      fontWeight: FontWeight.normal),
+                ),
+              ],
+            ),
+            floating: true,
+            pinned: true,
+            backgroundColor: Colors.white.withValues(alpha: 0.8),
+            elevation: 0,
+            scrolledUnderElevation: 0,
+            flexibleSpace: ClipRect(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                child: Container(color: Colors.transparent),
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+              child: Row(
+                children: [
+                  _buildFilterChip('上传者'),
+                  _buildFilterChip('点赞'),
+                  _buildFilterChip('标签'),
+                  _buildFilterChip('机型'),
+                  const SizedBox(width: 12),
+                  Icon(Icons.tune, color: Colors.grey.shade400, size: 20),
+                ],
+              ),
+            ),
+          ),
+          ...buildSliverYFileGroupedListView<YFileItem>(
+            groups: groups,
+            config: YFileGroupedConfig(
+              mode: _mode,
+              pinnedHeader: true,
+              groupHeaderHeight: 46,
+              gridConfig: YFileGridConfig(
+                crossAxisCount: crossAxisCount,
+                crossAxisSpacing: 1.0,
+                mainAxisSpacing: 1.0,
+                padding: EdgeInsets.zero,
+              ),
+              listConfig: const YFileListConfig(
+                padding: EdgeInsets.zero,
+                itemExtent: 72,
+              ),
+            ),
+            headerBuilder: (context, group, index) {
+              return Container(
+                height: 46,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                alignment: Alignment.centerLeft,
+                color: Colors.white.withValues(alpha: 0.5),
+                child: Text(
+                  group.groupTitle,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black87,
+                    letterSpacing: -0.4,
+                  ),
+                ),
+              );
+            },
+            itemBuilder: (context, group, item, groupIndex, itemIndex) {
+              final isSelected = _selectedIds.contains(item.id);
+              int globalIndex = groupOffsets[groupIndex] + itemIndex;
+
+              Widget child;
+              if (_mode == YFileGroupedMode.grid) {
+                child = YFileGridItem(
+                  item: item,
+                  selected: isSelected,
+                  onTap: () => _toggleSelection(item.id),
+                );
+              } else {
+                child = YFileListItem(
+                  item: item,
+                  config: const YFileListUIConfig(
+                      showDivider: true, dividerIndent: 76),
+                  selected: isSelected,
+                  onTap: () => _toggleSelection(item.id),
+                );
+              }
+
+              return YDragSelectElement(
+                index: globalIndex,
+                child: child,
+              );
+            },
+          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 140)),
         ],
       ),
     );

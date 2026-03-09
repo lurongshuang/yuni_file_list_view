@@ -26,12 +26,16 @@ class YFileGroupedConfig {
   final YFileListConfig listConfig;
 
   /// Header 是否粘性吸顶（在 CustomScrollView 中生效）
-  ///
-  /// `true` 时会使用 [SliverPinnedHeader] 实现吸顶效果。
   final bool pinnedHeader;
 
   /// 列表整体内边距
   final EdgeInsets padding;
+
+  /// 分组 header 的高度（dp），需与 [headerBuilder] 实际返回的 widget 高度一致。
+  ///
+  /// 仅在 [pinnedHeader] 为 true 时用于计算各分组的边界，从而确定吸顶显示哪个分组。
+  /// 默认 44.0。
+  final double groupHeaderHeight;
 
   const YFileGroupedConfig({
     this.mode = YFileGroupedMode.grid,
@@ -39,6 +43,7 @@ class YFileGroupedConfig {
     this.listConfig = const YFileListConfig(),
     this.pinnedHeader = true,
     this.padding = EdgeInsets.zero,
+    this.groupHeaderHeight = 44.0,
   });
 
   YFileGroupedConfig copyWith({
@@ -47,6 +52,7 @@ class YFileGroupedConfig {
     YFileListConfig? listConfig,
     bool? pinnedHeader,
     EdgeInsets? padding,
+    double? groupHeaderHeight,
   }) {
     return YFileGroupedConfig(
       mode: mode ?? this.mode,
@@ -54,6 +60,7 @@ class YFileGroupedConfig {
       listConfig: listConfig ?? this.listConfig,
       pinnedHeader: pinnedHeader ?? this.pinnedHeader,
       padding: padding ?? this.padding,
+      groupHeaderHeight: groupHeaderHeight ?? this.groupHeaderHeight,
     );
   }
 }
