@@ -3,6 +3,7 @@ import 'grid_demo_page.dart';
 import 'list_demo_page.dart';
 import 'grouped_list_demo_page.dart';
 import 'sliver_demo_page.dart';
+import 'sliver_components_demo_page.dart';
 import 'photo_gallery_demo_page.dart';
 import 'desktop_list_demo_page.dart';
 import 'advanced_desktop_demo_page.dart';
@@ -50,7 +51,16 @@ class DemoHomePage extends StatelessWidget {
           const SizedBox(height: 16),
           _buildCard(
             context,
-            title: '4. Sliver 组合嵌套 (CustomScrollView)',
+            title: '4. Sliver 组件演示',
+            subtitle: 'SliverYFileGridView / SliverYFileListView 原子组件',
+            icon: Icons.layers,
+            color: Colors.purple,
+            page: const SliverComponentsDemoPage(),
+          ),
+          const SizedBox(height: 16),
+          _buildCard(
+            context,
+            title: '5. Sliver 组合嵌套',
             subtitle: '与其他 Sliver 组件自由组合滚动',
             icon: Icons.layers,
             color: Colors.purple,

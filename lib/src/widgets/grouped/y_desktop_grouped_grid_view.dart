@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/gestures.dart';
 import '../interaction/y_desktop_selection_controller.dart';
 import '../interaction/y_desktop_selection_region.dart';
 import '../../model/y_file_group.dart';

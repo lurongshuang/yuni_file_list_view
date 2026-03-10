@@ -45,7 +45,7 @@ class YFileListView<T> extends StatelessWidget {
       physics: physics,
       shrinkWrap: shrinkWrap,
       slivers: [
-        buildSliverYFileListView<T>(
+        SliverYFileListView<T>(
           items: items,
           itemBuilder: itemBuilder,
           config: config,

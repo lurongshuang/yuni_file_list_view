@@ -64,7 +64,7 @@ class YFileGridView<T> extends StatelessWidget {
           physics: physics,
           shrinkWrap: shrinkWrap,
           slivers: [
-            buildSliverYFileGridView<T>(
+            SliverYFileGridView<T>(
               items: items,
               itemBuilder: itemBuilder,
               config: config,
