@@ -169,6 +169,12 @@ class _PinnedHeaderContentState<T>
   ScrollPosition? _scrollPosition;
   int _currentGroupIndex = 0;
 
+  // 缓存已构建的 Widget 及其依赖项
+  Widget? _cachedHeader;
+  int? _lastBuiltGroupIndex;
+  List<YFileGroup<T>>? _lastGroups;
+  YFileGroupHeaderBuilder<T>? _lastHeaderBuilder;
+
   void _onScroll() {
     if (!mounted) return;
 
@@ -201,8 +207,16 @@ class _PinnedHeaderContentState<T>
   @override
   void didUpdateWidget(covariant _PinnedHeaderContent<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // 外部数据源发生变化（比如切换维度）时
-    if (oldWidget.groups != widget.groups) {
+    // 外部数据源发生变化（比如切换维度）或 Builder 变动时
+    final groupsChanged = !identical(oldWidget.groups, widget.groups);
+    final builderChanged = !identical(oldWidget.headerBuilder, widget.headerBuilder);
+    
+    if (groupsChanged || builderChanged) {
+      // 这里的变更需要清理缓存，触发重新构建
+      _cachedHeader = null;
+      _lastGroups = null;
+      _lastHeaderBuilder = null;
+
       // 预先拦截并修正可能的索引越界问题，彻底避免渲染期的非法读越界
       if (_currentGroupIndex >= widget.groups.length) {
         setState(() {
@@ -230,24 +244,34 @@ class _PinnedHeaderContentState<T>
       return SizedBox(height: widget.headerExtent);
     }
     
-    // 动态维护最新的滚动监听：解决 IndexedStack 切换等导致原 Position 对象失效脱落的终极防线
+    // 动态维护最新的滚动监听
     final currentPos = Scrollable.maybeOf(context)?.position;
     if (_scrollPosition != currentPos && currentPos != null) {
       _scrollPosition?.removeListener(_onScroll);
       _scrollPosition = currentPos;
       _scrollPosition!.addListener(_onScroll);
-      // 刚绑上新 Position 时可能错过了事件，在下一帧强制对齐
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _onScroll();
       });
     }
-    
-    // build 阶段只负责使用已计算好的 _currentGroupIndex 与安全监听注册。
-    // 旧的直接在 build 改写越界状态引发警告的 Bad Smell 异味代码已重构到 didUpdateWidget 环节。
-    // 坚决不在 build 期间调用 findRenderObject (特别是在 Hot Reload 时，
-    // 其子 Element 可能是 inactive 状态，会抛出 AssertionError)。
-    return widget.headerBuilder(
-        context, widget.groups[_currentGroupIndex], _currentGroupIndex);
+
+    // 缓存机制：若关键参数未变，直接返回上一次的结果，避免每一帧都执行 builder
+    final sameGroups = identical(_lastGroups, widget.groups);
+    final sameBuilder = identical(_lastHeaderBuilder, widget.headerBuilder);
+    final sameIndex = _lastBuiltGroupIndex == _currentGroupIndex;
+
+    if (_cachedHeader != null && sameGroups && sameBuilder && sameIndex) {
+      return _cachedHeader!;
+    }
+
+    // 更新缓存并返回新 Widget
+    final group = widget.groups[_currentGroupIndex];
+    _cachedHeader = widget.headerBuilder(context, group, _currentGroupIndex);
+    _lastBuiltGroupIndex = _currentGroupIndex;
+    _lastGroups = widget.groups;
+    _lastHeaderBuilder = widget.headerBuilder;
+
+    return _cachedHeader!;
   }
 
   /// 通过 GlobalKey 读取各分组 in-list header 的实际屏幕坐标，与吸顶坐标对比。

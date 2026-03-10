@@ -183,9 +183,12 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
           IndexedStack(
             index: dimIndex,
             children: [
-              _buildGalleryView('year', 5, _yearScrollCtrl, _yearGroups, _yearOffsets),
-              _buildGalleryView('month', 4, _monthScrollCtrl, _monthGroups, _monthOffsets),
-              _buildGalleryView('day', 3, _dayScrollCtrl, _dayGroups, _dayOffsets),
+              _buildGalleryView(
+                  'year', 5, _yearScrollCtrl, _yearGroups, _yearOffsets),
+              _buildGalleryView(
+                  'month', 4, _monthScrollCtrl, _monthGroups, _monthOffsets),
+              _buildGalleryView(
+                  'day', 3, _dayScrollCtrl, _dayGroups, _dayOffsets),
             ],
           ),
           Positioned(
