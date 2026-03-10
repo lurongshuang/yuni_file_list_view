@@ -456,15 +456,16 @@ List<Widget> _buildFlatSlivers<T>({
                 (item.startIndex + item.crossAxisCount)
                     .clamp(0, item.group.items.length),
               );
-              return Row(
-                children: List.generate(item.crossAxisCount, (col) {
-                  if (col < rowItems.length) {
-                    return Expanded(
+              final children = <Widget>[];
+              for (int col = 0; col < item.crossAxisCount; col++) {
+                if (col > 0) {
+                  children.add(SizedBox(width: gridConfig.crossAxisSpacing));
+                }
+                if (col < rowItems.length) {
+                  children.add(
+                    Expanded(
                       child: Padding(
                         padding: EdgeInsets.only(
-                          right: col < item.crossAxisCount - 1
-                              ? gridConfig.crossAxisSpacing
-                              : 0,
                           top: gridConfig.mainAxisSpacing / 2,
                           bottom: gridConfig.mainAxisSpacing / 2,
                         ),
@@ -479,11 +480,13 @@ List<Widget> _buildFlatSlivers<T>({
                           ),
                         ),
                       ),
-                    );
-                  }
-                  return const Expanded(child: SizedBox.shrink());
-                }),
-              );
+                    ),
+                  );
+                } else {
+                  children.add(const Expanded(child: SizedBox.shrink()));
+                }
+              }
+              return Row(children: children);
             } else if (item is _ListItem<T>) {
               return itemBuilder(
                 context,

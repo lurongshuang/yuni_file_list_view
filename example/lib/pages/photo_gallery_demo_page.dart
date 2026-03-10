@@ -329,8 +329,8 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
               groupHeaderHeight: 46,
               gridConfig: YFileGridConfig(
                 crossAxisCount: crossAxisCount,
-                crossAxisSpacing: 1.0,
-                mainAxisSpacing: 1.0,
+                crossAxisSpacing: 8.0,
+                mainAxisSpacing: 8.0,
                 padding: EdgeInsets.zero,
               ),
               listConfig: const YFileListConfig(
