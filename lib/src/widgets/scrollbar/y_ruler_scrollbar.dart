@@ -78,6 +78,13 @@ class YRulerScrollbar extends StatefulWidget {
   /// Scrollbar 距离屏幕右边缘的偏移，默认 4（避免贴边）
   final double scrollbarMarginEnd;
 
+  /// Scrollbar 轨道半至容器顶部的距离，默认 0。
+  /// 可用于避开悬浮在列表上方的 SliverAppBar 等元素。
+  final double scrollbarMarginTop;
+
+  /// Scrollbar 轨道距容器底部的距离，默认 0。
+  final double scrollbarMarginBottom;
+
   /// 点击轨道（非节点区域）时是否按比例跳转，默认 true
   final bool tapTrackToScroll;
 
@@ -96,6 +103,8 @@ class YRulerScrollbar extends StatefulWidget {
     this.extentRatioBuilder,
     this.showTicksOnDragOnly = true,
     this.scrollbarMarginEnd = 4.0,
+    this.scrollbarMarginTop = 0.0,
+    this.scrollbarMarginBottom = 0.0,
     this.tapTrackToScroll = true,
     this.nodeTapTolerance = 12.0,
   });
@@ -117,6 +126,11 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
   double _maxScrollExtent = 0;
   double _viewportExtent = 0;
   bool _isDragging = false;
+
+  /// 拖拽开始时快照的 maxScrollExtent。
+  /// 拖拽期间使用这个冻结小来计算 target，避免 SliverGrid 懒加载布局调整导致 maxScrollExtent
+  /// 不断掺动而弖入正反馈振荡。
+  double _dragMaxScrollExtent = 0;
 
   /// 拖拽时提示面板的 Y 中心偏移（相对于 Scrollbar 容器顶部）
   double _hintCenterY = 0;
@@ -158,9 +172,8 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
       hasCustomNodeLabelBuilder: widget.nodeLabelBuilder != null,
     );
 
-    widget.controller.addListener(_onScroll);
-
-    // 等第一帧渲染完后读取初始 extents
+    // 等第一帧渲染完后读取初始 extents（拖拽时 NotificationListener 会实时更新，
+    // 但首帧我们还需要主动读取一次以初始化画笔）
     WidgetsBinding.instance.addPostFrameCallback((_) => _syncExtents());
   }
 
@@ -168,8 +181,8 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
   void didUpdateWidget(covariant YRulerScrollbar old) {
     super.didUpdateWidget(old);
     if (!identical(old.controller, widget.controller)) {
-      old.controller.removeListener(_onScroll);
-      widget.controller.addListener(_onScroll);
+      // controller 切换时重新同步初始值
+      WidgetsBinding.instance.addPostFrameCallback((_) => _syncExtents());
     }
     _painter.nodes = widget.nodes;
     _painter.style = widget.style;
@@ -186,7 +199,6 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
 
   @override
   void dispose() {
-    widget.controller.removeListener(_onScroll);
     _painter.dispose();
     _hintFade.dispose();
     _tickFade.dispose();
@@ -195,17 +207,24 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
 
   // ─── 滚动同步 ─────────────────────────────────────────────────────────────
 
-  void _onScroll() {
-    final pos = widget.controller.position;
-    _currentOffset = pos.pixels;
-    _maxScrollExtent = pos.maxScrollExtent;
-    _viewportExtent = pos.viewportDimension;
+  /// 由 NotificationListener 回调，接收来自 Flutter 滚动系统的一致性 ScrollMetrics 快照。
+  /// 与 RawScrollbar 的实现方式完全一致，确保 pixels / maxScrollExtent / viewportDimension
+  /// 三个值来自同一帧时刻，消除时序不一致导致的 Thumb 跳动。
+  void _updateFromMetrics(ScrollMetrics metrics) {
+    _currentOffset = metrics.pixels;
+    _viewportExtent = metrics.viewportDimension;
+
+    // 拖拽期间，不更新渲染用的 _maxScrollExtent。
+    // 原因：SliverGrid 懒加载布局会常常导致 maxScrollExtent 在两个局部最小値之间振荡。
+    // 若拖拽期间允许更新，_dyToOffset 会用不同分母重算目标位置，导致 jumpTo 揥动布局再变，弖入正反馈振荡。
+    if (!_isDragging) {
+      _maxScrollExtent = metrics.maxScrollExtent;
+    }
 
     _painter.scrollOffset = _currentOffset;
     _painter.maxScrollExtent = _maxScrollExtent;
     _painter.viewportExtent = _viewportExtent;
 
-    // 拖拽时同步提示位置
     if (_isDragging) _updateHintPosition();
   }
 
@@ -213,24 +232,22 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
     if (!mounted) return;
     if (!widget.controller.hasClients) return;
     final pos = widget.controller.position;
-    _currentOffset = pos.pixels;
-    _maxScrollExtent = pos.maxScrollExtent;
-    _viewportExtent = pos.viewportDimension;
-    _painter.scrollOffset = _currentOffset;
-    _painter.maxScrollExtent = _maxScrollExtent;
-    _painter.viewportExtent = _viewportExtent;
+    _updateFromMetrics(pos);
   }
 
   // ─── 交互逻辑 ─────────────────────────────────────────────────────────────
 
-  /// 把触摸点的 dy（相对于轨道顶部）转换为目标 scrollOffset
+  /// 把触摸点的 dy（相对于轨道顶部）转换为目标 scrollOffset。
+  /// 拖拽期间使用 _dragMaxScrollExtent（快照的冻结小），
+  /// 避免 SliverGrid 懒加载布局导致的 maxScrollExtent 振荡产生正反馈振荡。
   double _dyToOffset(double dy, double trackHeight) {
-    if (_maxScrollExtent <= 0) return 0;
+    final maxExt = _isDragging ? _dragMaxScrollExtent : _maxScrollExtent;
+    if (maxExt <= 0) return 0;
     final thumbH = _calcThumbHeight(trackHeight);
     final usable = trackHeight - thumbH;
     if (usable <= 0) return 0;
     final ratio = ((dy - thumbH / 2) / usable).clamp(0.0, 1.0);
-    return ratio * _maxScrollExtent;
+    return ratio * maxExt;
   }
 
   double _calcThumbHeight(double trackHeight) {
@@ -238,12 +255,13 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
     if (total <= 0 || _maxScrollExtent <= 0) return trackHeight;
     final visibleRatio = _viewportExtent / total;
     final raw = trackHeight * visibleRatio;
-    return raw.clamp(
+    final clamped = raw.clamp(
       widget.style.thumbMinHeight,
       widget.style.thumbMaxHeight == double.infinity
           ? trackHeight
           : widget.style.thumbMaxHeight,
     );
+    return clamped;
   }
 
   /// 更新提示面板的 Y 坐标（让其跟随 thumb 中心）
@@ -306,6 +324,10 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
   void _onDragStart(DragStartDetails details) {
     _isDragging = true;
     _painter.isDragging = true;
+    // ⭐ 快照当前的 maxScrollExtent 作为拖拽期间的击结小，
+    // 后续拖拽期间即使 SliverGrid 懒加载布局导致 maxScrollExtent 振荡，
+    // _dyToOffset 也始终使用这个稳定的分母计算目标位置，不会陷入振荡循环。
+    _dragMaxScrollExtent = _maxScrollExtent;
     _hintFade.forward();
     if (widget.showTicksOnDragOnly) {
       _tickFade.forward();
@@ -410,15 +432,29 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
         (hasNodes ? (maxTickLen + labelWidth) : 0.0) +
         widget.style.padding.horizontal;
 
-    return Stack(
-      children: [
-        // ── 主内容 ─────────────────────────────────────────────────────────
-        widget.child,
+    // 与 Flutter RawScrollbar 相同的实现方式：
+    // 用 NotificationListener 监听 ScrollMetrics 变化，接收来自 Flutter 滚动系统的
+    // 一致性快照（pixels / maxScrollExtent / viewportDimension 同帧写入），
+    // 避免 controller.addListener 中异步读取导致的三值不一致问题。
+    return NotificationListener<ScrollMetricsNotification>(
+      onNotification: (n) {
+        _updateFromMetrics(n.metrics);
+        return false; // 不消耗，让事件继续冒泡
+      },
+      child: NotificationListener<ScrollUpdateNotification>(
+        onNotification: (n) {
+          _updateFromMetrics(n.metrics);
+          return false;
+        },
+        child: Stack(
+          children: [
+            // ── 主内容 ─────────────────────────────────────────────────────────
+            widget.child,
 
         // ── Scrollbar（右侧固定列） ─────────────────────────────────────────
         Positioned(
-          top: 0,
-          bottom: 0,
+          top: widget.scrollbarMarginTop,
+          bottom: widget.scrollbarMarginBottom,
           right: widget.scrollbarMarginEnd,
           width: scrollbarWidth,
           child: GestureDetector(
@@ -456,6 +492,7 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
                   builder: (context, child) {
                     final tickOpacity = _tickFade.value;
                     return Stack(
+                      clipBehavior: Clip.none,
                       children: [
                         paintWidget,
                         if (tickOpacity > 0)
@@ -494,8 +531,8 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
             builder: (context, child) {
               return Positioned(
                 right: widget.scrollbarMarginEnd + scrollbarWidth + 4,
-                top: 0,
-                bottom: 0,
+                top: widget.scrollbarMarginTop,
+                bottom: widget.scrollbarMarginBottom,
                 child: IgnorePointer( // 防止阻挡滑动手势
                   child: FadeTransition(
                     opacity: _hintFade,
@@ -515,7 +552,9 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
             },
             child: _buildHint(),
           ),
-      ],
+        ],
+        ),
+      ),
     );
   }
 

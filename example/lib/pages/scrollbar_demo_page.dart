@@ -336,7 +336,7 @@ class __FullScrollbarDemoState extends State<_FullScrollbarDemo> {
             color: Colors.deepPurple.withValues(alpha: 0.08),
           ),
           child: Text(
-            node.label.substring(0, 4), // 我们仅用年份演示自定义效果
+            node.label, // 我们仅用年份演示自定义效果
             style: const TextStyle(
               color: Colors.deepPurple,
               fontSize: 10,

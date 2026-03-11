@@ -28,7 +28,7 @@
 
 ```yaml
 dependencies:
-  yuni_file_list_view: ^0.0.3
+  yuni_file_list_view: ^0.0.8
 ```
 
 导入核心包：
@@ -192,6 +192,32 @@ YDesktopGroupedView<MyFileData>(
   },
 )
 ```
+
+### 4. 业务级刻度滚动条 `YRulerScrollbar`
+**适用场景**：仿系统相册、大型文件库。不仅提供基础滚动，还支持带有“年份/类别”节点的侧边刻度尺，支持点击跳转和拖拽预览。
+
+```dart
+YRulerScrollbar(
+  controller: _scrollController,
+  nodes: myYearGroups, // 直接传入你的分组列表
+  // 必须：告诉组件每个节点在大列表中的位置占比 (0.0~1.0)
+  extentRatioBuilder: (node, index) => calculateRatio(index),
+  // 可选：自定义刻度标签预览 Widget
+  nodeLabelBuilder: (context, node, index) => Text(node.label),
+  // 可选：轨道边距，用于避开顶部自定义 AppBar
+  scrollbarMarginTop: 100,
+  style: YRulerScrollbarStyle(
+    thumbColor: Colors.blue.withValues(alpha: 0.5),
+    thumbWidth: 4,
+    showTrack: false,
+  ),
+  child: CustomScrollView(
+    controller: _scrollController,
+    slivers: [ /* ... */ ],
+  ),
+)
+```
+
 
 ### 5. 桌面端选择控制器 `YDesktopSelectionController`
 **适用场景**：桌面端应用中需要复杂选择逻辑的场景，如批量操作文件、多选编辑等。
