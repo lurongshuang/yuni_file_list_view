@@ -7,6 +7,7 @@ import 'sliver_components_demo_page.dart';
 import 'photo_gallery_demo_page.dart';
 import 'desktop_list_demo_page.dart';
 import 'advanced_desktop_demo_page.dart';
+import 'scrollbar_demo_page.dart';
 
 class DemoHomePage extends StatelessWidget {
   const DemoHomePage({super.key});
@@ -92,6 +93,15 @@ class DemoHomePage extends StatelessWidget {
             icon: Icons.dashboard_customize,
             color: Colors.deepOrange,
             page: const AdvancedDesktopDemoPage(),
+          ),
+          const SizedBox(height: 16),
+          _buildCard(
+            context,
+            title: '9. YRulerScrollbar 尺子滚动条',
+            subtitle: '自定义样式、刻度节点跳转、拖拽左侧提示',
+            icon: Icons.straighten,
+            color: Colors.deepPurple,
+            page: const ScrollbarDemoPage(),
           ),
         ],
       ),

@@ -1,3 +1,5 @@
+import '../widgets/scrollbar/y_ruler_scrollbar_node.dart';
+
 /// 文件分组数据模型
 ///
 /// 用于 [YFileGroupedListView] 和 [SliverYFileGroupedListView]。
@@ -11,7 +13,7 @@
 ///   ),
 /// ];
 /// ```
-class YFileGroup<T> {
+class YFileGroup<T> implements YRulerScrollbarNode {
   /// 分组唯一标识
   final String groupId;
 
@@ -30,6 +32,12 @@ class YFileGroup<T> {
     required this.items,
     this.extra,
   });
+
+  @override
+  String get label => groupTitle;
+
+  @override
+  bool get isMajor => true; // 默认分组级别的节点作为主节点展示
 
   /// 总文件数
   int get count => items.length;

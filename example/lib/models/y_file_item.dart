@@ -1,3 +1,5 @@
+import 'package:yuni_file_list_view/yuni_file_list_view.dart';
+
 /// 文件类型枚举
 enum YFileType {
   /// 图片（jpg/png/gif/webp 等）
@@ -29,7 +31,7 @@ enum YFileType {
 ///   const MyFile({required super.id, required super.name, required this.uploaderId, ...});
 /// }
 /// ```
-class YFileItem {
+class YFileItem implements YRulerScrollbarNode {
   /// 文件唯一标识
   final String id;
 
@@ -64,6 +66,12 @@ class YFileItem {
     this.thumbnailUrl,
     this.extra,
   });
+
+  @override
+  String get label => name;
+
+  @override
+  bool get isMajor => false;
 
   /// 从当前实例创建一个字段覆写的副本
   YFileItem copyWith({

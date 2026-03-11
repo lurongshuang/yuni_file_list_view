@@ -48,3 +48,9 @@ export 'src/widgets/grid/y_desktop_file_grid_view.dart';
 export 'src/widgets/grouped/y_desktop_grouped_view.dart';
 export 'src/widgets/grouped/y_desktop_grouped_grid_view.dart';
 export 'src/model/y_selection_data.dart';
+
+// ─── 自定义 RulerScrollbar ──────────────────────────────────────────────────
+export 'src/widgets/scrollbar/y_ruler_scrollbar_style.dart';
+export 'src/widgets/scrollbar/y_ruler_scrollbar_node.dart';
+export 'src/widgets/scrollbar/y_ruler_scrollbar_hint.dart';
+export 'src/widgets/scrollbar/y_ruler_scrollbar.dart';

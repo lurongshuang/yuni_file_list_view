@@ -18,10 +18,26 @@ class DemoData {
     );
   });
 
-  static List<YFileGroup<YFileItem>> getGroupsByDimension(String dimension) {
+  static final List<YFileItem> gridItems2 = List.generate(100, (i) {
+    final types = [YFileType.image, YFileType.video];
+    final type = types[i % types.length];
+    // 分散在过去三年的不同月份
+    final date = DateTime(2023, 1 + (i % 12), 1 + (i % 28));
+    return YFileItem(
+      id: 'photo_$i',
+      name:
+          'IMG_${date.year}${date.month.toString().padLeft(2, '0')}${date.day.toString().padLeft(2, '0')}_$i.jpg',
+      type: type,
+      modifiedAt: date,
+      thumbnailUrl: 'https://picsum.photos/seed/photo$i/300/300',
+    );
+  });
+
+  static List<YFileGroup<YFileItem>> getGroupsByDimension(String dimension,
+      {List<YFileItem>? items}) {
     final Map<String, List<YFileItem>> map = {};
 
-    for (var item in gridItems) {
+    for (var item in (items ?? gridItems)) {
       final date = item.modifiedAt ?? DateTime.now();
       String key;
       if (dimension == 'year') {
