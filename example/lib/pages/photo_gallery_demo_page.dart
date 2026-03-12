@@ -262,6 +262,7 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
             HapticFeedback.lightImpact();
           }
         },
+        enableDebugLog: true,
         // 避开顶部 SliverAppBar 悬浮区域
         // 极其舒爽的一键集成业务实体
         style: YRulerScrollbarStyle(
