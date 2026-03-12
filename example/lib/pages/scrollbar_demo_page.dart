@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:yuni_file_list_view/yuni_file_list_view.dart';
 import '../models/y_file_item.dart';
 import '../data/demo_data.dart';
@@ -86,6 +87,11 @@ class __SimpleScrollbarDemoState extends State<_SimpleScrollbarDemo> {
     // 模拟从接口获取真实的普通长列表数据
     _items = DemoData.listItems;
   }
+  
+  bool _thumbVisibility = false;
+  double _fadeInMs = 100;
+  double _fadeOutMs = 300;
+  double _timeToFadeMs = 600;
 
   @override
   void dispose() {
@@ -95,42 +101,66 @@ class __SimpleScrollbarDemoState extends State<_SimpleScrollbarDemo> {
 
   @override
   Widget build(BuildContext context) {
-    return YRulerScrollbar(
-      controller: _ctrl,
-      style: YRulerScrollbarStyle(
-          thumbColor: Colors.indigo.withValues(alpha: 0.5),
-          thumbDraggingColor: Colors.indigo,
-          thumbWidth: 5,
-          thumbMinHeight: 32,
-          showTrack: true,
-          trackColor: Colors.transparent,
-          trackBorderColor: Colors.transparent),
-      showHintOnDrag: false,
-      child: ListView.builder(
-        controller: _ctrl,
-        padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 12),
-        itemCount: _items.length,
-        itemExtent: 80,
-        // 指定固定高度，避免快滑卡顿
-        itemBuilder: (_, i) {
-          final item = _items[i];
-          return Container(
-            alignment: Alignment.center,
-            decoration: const BoxDecoration(
-              border:
-                  Border(bottom: BorderSide(color: Colors.black12, width: 0.5)),
+    return Column(
+      children: [
+        SwitchListTile(
+          title: const Text('始终显示滑块 (thumbVisibility)'),
+          subtitle: const Text('开启后滑块不再自动淡出'),
+          value: _thumbVisibility,
+          onChanged: (v) => setState(() => _thumbVisibility = v),
+        ),
+        if (!_thumbVisibility) ...[
+          _buildSlider('淡入时长 (ms)', _fadeInMs, 0, 1000,
+              (v) => setState(() => _fadeInMs = v)),
+          _buildSlider('淡出时长 (ms)', _fadeOutMs, 0, 2000,
+              (v) => setState(() => _fadeOutMs = v)),
+          _buildSlider('隐藏延迟 (ms)', _timeToFadeMs, 0, 3000,
+              (v) => setState(() => _timeToFadeMs = v)),
+        ],
+        Expanded(
+          child: YRulerScrollbar(
+            controller: _ctrl,
+            thumbVisibility: _thumbVisibility,
+            fadeInDuration: Duration(milliseconds: _fadeInMs.toInt()),
+            fadeOutDuration: Duration(milliseconds: _fadeOutMs.toInt()),
+            timeToFade: Duration(milliseconds: _timeToFadeMs.toInt()),
+            style: YRulerScrollbarStyle(
+                thumbColor: Colors.indigo.withValues(alpha: 0.5),
+                thumbDraggingColor: Colors.indigo,
+                thumbWidth: 5,
+                thumbMinHeight: 32,
+                showTrack: true,
+                trackColor: Colors.transparent,
+                trackBorderColor: Colors.transparent),
+            showHintOnDrag: false,
+            child: ListView.builder(
+              controller: _ctrl,
+              padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 12),
+              itemCount: _items.length,
+              itemExtent: 80,
+              // 指定固定高度，避免快滑卡顿
+              itemBuilder: (_, i) {
+                final item = _items[i];
+                return Container(
+                  alignment: Alignment.center,
+                  decoration: const BoxDecoration(
+                    border: Border(
+                        bottom: BorderSide(color: Colors.black12, width: 0.5)),
+                  ),
+                  child: ListTile(
+                    leading: leadingIcon(item),
+                    title: Text(item.name,
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                    subtitle: Text(
+                        '大小: ${item.fileSize ?? 0} B \n修改时间: ${item.modifiedAt?.toString().substring(0, 16) ?? ''}'),
+                    isThreeLine: true,
+                  ),
+                );
+              },
             ),
-            child: ListTile(
-              leading: leadingIcon(item),
-              title:
-                  Text(item.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-              subtitle: Text(
-                  '大小: ${item.fileSize ?? 0} B \n修改时间: ${item.modifiedAt?.toString().substring(0, 16) ?? ''}'),
-              isThreeLine: true,
-            ),
-          );
-        },
-      ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -150,6 +180,29 @@ class __SimpleScrollbarDemoState extends State<_SimpleScrollbarDemo> {
       backgroundColor: Colors.indigo.withValues(alpha: 0.12),
       child:
           const Icon(Icons.insert_drive_file, color: Colors.indigo, size: 20),
+    );
+  }
+
+  Widget _buildSlider(String label, double value, double min, double max,
+      ValueChanged<double> onChanged) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          SizedBox(
+              width: 100,
+              child: Text(label, style: const TextStyle(fontSize: 12))),
+          Expanded(
+            child: Slider(
+              value: value,
+              min: min,
+              max: max,
+              onChanged: onChanged,
+            ),
+          ),
+          Text('${value.toInt()}ms', style: const TextStyle(fontSize: 12)),
+        ],
+      ),
     );
   }
 }
@@ -294,6 +347,13 @@ class __FullScrollbarDemoState extends State<_FullScrollbarDemo> {
           absoluteIndex += _months[i].count;
         }
         return absoluteIndex / _totalItems;
+      },
+      onHintChanged: (node) {
+        // 🔥 交互升级：当提示文本切换时切换触发触感反馈
+        if (node != null) {
+          HapticFeedback.lightImpact();
+          debugPrint('Scrollbar node changed to: ${node.label}');
+        }
       },
       showHintOnDrag: true,
       hintBuilder: (context, node, offset) {

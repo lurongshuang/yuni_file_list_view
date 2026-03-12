@@ -20,6 +20,7 @@ class YRulerScrollbarPainter extends ChangeNotifier
     required List<YRulerScrollbarNode> nodes,
     required YRulerScrollbarStyle style,
     double tickOpacity = 0.0,
+    double thumbOpacity = 1.0,
     this.extentRatioBuilder,
     this.hasCustomNodeLabelBuilder = false,
   })  : _scrollOffset = scrollOffset,
@@ -28,7 +29,8 @@ class YRulerScrollbarPainter extends ChangeNotifier
         _isDragging = isDragging,
         _nodes = nodes,
         _style = style,
-        _tickOpacity = tickOpacity;
+        _tickOpacity = tickOpacity,
+        _thumbOpacity = thumbOpacity;
 
   double _scrollOffset;
   double _maxScrollExtent;
@@ -47,6 +49,9 @@ class YRulerScrollbarPainter extends ChangeNotifier
   /// 刻度线和标签的整体不透明度（0.0 = 不可见，1.0 = 完全可见）。
   /// 由外部动画驱动，无需在此触发 notifyListeners（调用方负责刷新）。
   double _tickOpacity;
+
+  /// 滑块不透明度
+  double _thumbOpacity;
 
   // ─── setters，外部更新后调用 notifyListeners ─────────────────────────────
 
@@ -87,6 +92,10 @@ class YRulerScrollbarPainter extends ChangeNotifier
   /// 由动画回调直接更新，不触发 notifyListeners（动画帧已触发 repaint）
   set tickOpacity(double v) {
     _tickOpacity = v;
+  }
+
+  set thumbOpacity(double v) {
+    _thumbOpacity = v;
   }
 
   // ─── 计算 Thumb 位置和高度 ────────────────────────────────────────────────
@@ -159,8 +168,8 @@ class YRulerScrollbarPainter extends ChangeNotifier
     // 2. 刻度线（受 tickOpacity 控制，opacity=0 时跳过绘制节省性能）
     if (_nodes.isNotEmpty && _tickOpacity > 0.001) {
       final baseTickColor = _style.tickColor;
-      final tickAlpha = (baseTickColor.a * _tickOpacity).clamp(0.0, 255.0);
-      final tickColor = baseTickColor.withValues(alpha: tickAlpha / 255.0);
+      final tickAlpha = (baseTickColor.alpha * _tickOpacity).toInt();
+      final tickColor = baseTickColor.withAlpha(tickAlpha);
 
       final tickPaint = Paint()
         ..color = tickColor
@@ -213,9 +222,14 @@ class YRulerScrollbarPainter extends ChangeNotifier
       }
     }
 
-    // 3. Thumb（始终可见）
-    final thumbColor =
+    // 3. Thumb（受 thumbOpacity 控制）
+    if (_thumbOpacity <= 0.001) return;
+
+    final baseThumbColor =
         _isDragging ? _style.thumbDraggingColor : _style.thumbColor;
+    final thumbAlpha = (baseThumbColor.alpha * _thumbOpacity).toInt();
+    final thumbColor = baseThumbColor.withAlpha(thumbAlpha);
+
     final thumbRect = RRect.fromRectAndCorners(
       Rect.fromLTWH(
         thumbLeft,
@@ -239,7 +253,8 @@ class YRulerScrollbarPainter extends ChangeNotifier
         old._isDragging != _isDragging ||
         old._nodes != _nodes ||
         old._style != _style ||
-        old._tickOpacity != _tickOpacity;
+        old._tickOpacity != _tickOpacity ||
+        old._thumbOpacity != _thumbOpacity;
   }
 
   @override

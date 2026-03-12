@@ -1,3 +1,13 @@
+## 0.0.9
+
+* ✨ **YRulerScrollbar — 新增滑块可见性与隐藏延迟配置**：
+    * `thumbVisibility`: 支持设置滑块是否始终显示，默认为 `false`（标准滚动触发显示）。
+    * `timeToFade`: 支持配置滚动停止后，滑块开始执行隐藏动画前的延迟等待时间，默认 `600ms`。
+    * `fadeInDuration`: 支持配置滑块淡入动画的持续时间，默认 `100ms`（快速进入）。
+    * `fadeOutDuration`: 支持配置滑块淡出动画的持续时间，默认 `300ms`（平滑消失）。
+* 🎮 **YRulerScrollbar — 新增 `onHintChanged` 回调**：在拖拽过程中，当最近的刻度节点（Hint 内容）发生切换时触发。业务方可在此回调中接入触感反馈（如 `HapticFeedback.lightImpact()`），提升滑动交互体验。
+* 🛠 **优化示例 DEMO**：在 `ScrollbarDemoPage` 和 `PhotoGalleryDemoPage` 中集成了触感反馈演示。
+
 ## 0.0.8
 
 * 🎯 **YRulerScrollbar — 新增 `scrollbarMarginTop` / `scrollbarMarginBottom`**：支持设定轨道的上下边距，常用于避开 `SliverAppBar` 等顶部悬浮元素，让滚动条视觉区域更精准。左侧浮动 Hint 面板同步跟随偏移，不再出现上下错位。

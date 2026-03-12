@@ -204,6 +204,16 @@ YRulerScrollbar(
   extentRatioBuilder: (node, index) => calculateRatio(index),
   // 可选：自定义刻度标签预览 Widget
   nodeLabelBuilder: (context, node, index) => Text(node.label),
+  // 可选：设置滑块始终可见（默认 false）
+  thumbVisibility: true,
+  // 可选：提示内容切换回调（可用于触发震动反馈）
+  onHintChanged: (node) => HapticFeedback.lightImpact(),
+  // 可选：滑块淡入时长（默认 100ms，建议快）
+  fadeInDuration: const Duration(milliseconds: 100),
+  // 可选：滑块淡出时长（默认 300ms，建议慢）
+  fadeOutDuration: const Duration(milliseconds: 300),
+  // 可选：停止滑动后，开始执行淡出的延迟等待时长（默认 600ms）
+  timeToFade: const Duration(milliseconds: 800),
   // 可选：轨道边距，用于避开顶部自定义 AppBar
   scrollbarMarginTop: 100,
   style: YRulerScrollbarStyle(

@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:yuni_file_list_view/yuni_file_list_view.dart';
 import '../models/y_file_item.dart';
 import '../widgets/y_file_list_item.dart';
@@ -256,6 +257,11 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
         controller: scrollCtrl,
         nodes: groups,
         scrollbarMarginTop: 180,
+        onHintChanged: (node) {
+          if (node != null) {
+            HapticFeedback.lightImpact();
+          }
+        },
         // 避开顶部 SliverAppBar 悬浮区域
         // 极其舒爽的一键集成业务实体
         style: YRulerScrollbarStyle(

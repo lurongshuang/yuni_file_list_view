@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'y_ruler_scrollbar_hint.dart';
@@ -34,6 +35,11 @@ typedef YScrollbarNodeLabelBuilder = Widget Function(
 ///     YRulerScrollbarNode(label: '头部', extentRatio: 0.0, isMajor: true),
 ///     YRulerScrollbarNode(label: '尾部', extentRatio: 1.0, isMajor: true),
 ///   ],
+///   thumbVisibility: true, // 始终显示
+///   onHintChanged: (node) {
+///     // 提示切换时触发，如调用 HapticFeedback.lightImpact()
+///     print('Hint changed to: ${node?.label}');
+///   },
 ///   child: ListView.builder(
 ///     controller: ctrl,
 ///     itemBuilder: (_, i) => ListTile(title: Text('Item $i')),
@@ -67,9 +73,10 @@ class YRulerScrollbar extends StatefulWidget {
   /// 用于提供指定节点的占比（0.0 ~ 1.0）。
   /// 业务方可以通过传入自己实现 `YRulerScrollbarNode` 接口的真实数据列表，
   /// 并在此处返回：`(该数据在主列表的 Index) / (主列表总 Item 数)`。
-  /// 
+  ///
   /// 如果此回调为 null，默认行为是**均匀分布**（即按照 node 在 `nodes` 列表中的 index 等比划分）。
-  final double Function(YRulerScrollbarNode node, int index)? extentRatioBuilder;
+  final double Function(YRulerScrollbarNode node, int index)?
+      extentRatioBuilder;
 
   /// 是否仅在拖拽时显示刻度线（即尺子本身）。如果为 true，默认情况下只显示 Thumb，
   /// 拖拽时刻度线才淡入；松手后淡出。默认 true。
@@ -91,6 +98,21 @@ class YRulerScrollbar extends StatefulWidget {
   /// 点击节点识别的对齐容差（像素），节点 Y ±[nodeTapTolerance] 范围内均视为点击节点
   final double nodeTapTolerance;
 
+  /// 是否始终显示滑块，默认 false
+  final bool thumbVisibility;
+
+  /// 滑块淡入的持续时间，默认 100ms
+  final Duration fadeInDuration;
+
+  /// 滑块淡出的持续时间，默认 300ms
+  final Duration fadeOutDuration;
+
+  /// 滑动停止后，滑块开始隐藏前的延迟等待时间，默认 600ms
+  final Duration timeToFade;
+
+  /// 提示文本切换的回调。可在此时触发震动等交互。
+  final ValueChanged<YRulerScrollbarNode?>? onHintChanged;
+
   const YRulerScrollbar({
     super.key,
     required this.child,
@@ -107,6 +129,11 @@ class YRulerScrollbar extends StatefulWidget {
     this.scrollbarMarginBottom = 0.0,
     this.tapTrackToScroll = true,
     this.nodeTapTolerance = 12.0,
+    this.thumbVisibility = false,
+    this.fadeInDuration = const Duration(milliseconds: 100),
+    this.fadeOutDuration = const Duration(milliseconds: 300),
+    this.timeToFade = const Duration(milliseconds: 1000),
+    this.onHintChanged,
   });
 
   @override
@@ -119,8 +146,15 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
 
   // 控制左侧提示的淡入淡出
   late AnimationController _hintFade;
+
+  // 控制整体滑块的淡入淡出
+  late AnimationController _thumbFade;
+
   // 控制刻度线的淡入淡出
   late AnimationController _tickFade;
+
+  // 定时隐藏滑块
+  Timer? _fadeoutTimer;
 
   double _currentOffset = 0;
   double _maxScrollExtent = 0;
@@ -147,17 +181,28 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
       duration: const Duration(milliseconds: 200),
     );
 
+    _thumbFade = AnimationController(
+      vsync: this,
+      duration: widget.fadeInDuration,
+      reverseDuration: widget.fadeOutDuration,
+      value: widget.thumbVisibility ? 1.0 : 0.0,
+    );
+
     _tickFade = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 200),
       value: widget.showTicksOnDragOnly ? 0.0 : 1.0,
     );
 
-    // 刻度线透明度动画驱动画笔更新（但不调用 notifyListeners 避免重构，只需 repaint）
+    // 刻度线透明度动画驱动画笔更新
     _tickFade.addListener(() {
       _painter.tickOpacity = _tickFade.value;
-      // 触发重绘
-      _scrollbarKey.currentContext?.findRenderObject()?.markNeedsPaint();
+      _markNeedsPaint();
+    });
+
+    _thumbFade.addListener(() {
+      _painter.thumbOpacity = _thumbFade.value;
+      _markNeedsPaint();
     });
 
     _painter = YRulerScrollbarPainter(
@@ -168,6 +213,7 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
       nodes: widget.nodes,
       style: widget.style,
       tickOpacity: _tickFade.value,
+      thumbOpacity: _thumbFade.value,
       extentRatioBuilder: widget.extentRatioBuilder,
       hasCustomNodeLabelBuilder: widget.nodeLabelBuilder != null,
     );
@@ -195,14 +241,42 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
         _tickFade.value = 0.0;
       }
     }
+
+    if (old.thumbVisibility != widget.thumbVisibility) {
+      if (widget.thumbVisibility) {
+        _thumbFade.value = 1.0;
+        _fadeoutTimer?.cancel();
+      } else if (!_isDragging) {
+        _startFadeoutTimer();
+      }
+    }
+
+    if (old.fadeInDuration != widget.fadeInDuration) {
+      _thumbFade.duration = widget.fadeInDuration;
+    }
+    if (old.fadeOutDuration != widget.fadeOutDuration) {
+      _thumbFade.reverseDuration = widget.fadeOutDuration;
+    }
+
+    if (old.timeToFade != widget.timeToFade) {
+      if (_fadeoutTimer?.isActive ?? false) {
+        _startFadeoutTimer();
+      }
+    }
   }
 
   @override
   void dispose() {
     _painter.dispose();
     _hintFade.dispose();
+    _thumbFade.dispose();
     _tickFade.dispose();
+    _fadeoutTimer?.cancel();
     super.dispose();
+  }
+
+  void _markNeedsPaint() {
+    _scrollbarKey.currentContext?.findRenderObject()?.markNeedsPaint();
   }
 
   // ─── 滚动同步 ─────────────────────────────────────────────────────────────
@@ -225,7 +299,32 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
     _painter.maxScrollExtent = _maxScrollExtent;
     _painter.viewportExtent = _viewportExtent;
 
-    if (_isDragging) _updateHintPosition();
+    // 重要：必须在偏移量更新后触发重绘，否则滑块位置不会随滚动实时更新
+    _markNeedsPaint();
+
+    if (_isDragging) {
+      _updateHintPosition();
+    }
+  }
+
+  void _showThumb() {
+    if (widget.thumbVisibility || _isDragging || !mounted) return;
+    if (_thumbFade.status != AnimationStatus.forward &&
+        _thumbFade.value < 1.0) {
+      _thumbFade.forward();
+      // 使用 setState 确保在动画开始的首帧，整个框架层面都能感知到可见性状态的变化
+      setState(() {});
+    }
+    _startFadeoutTimer();
+  }
+
+  void _startFadeoutTimer() {
+    _fadeoutTimer?.cancel();
+    _fadeoutTimer = Timer(widget.timeToFade, () {
+      if (mounted && !widget.thumbVisibility && !_isDragging) {
+        _thumbFade.reverse();
+      }
+    });
   }
 
   void _syncExtents() {
@@ -274,9 +373,15 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
     final thumbTop = _maxScrollExtent > 0
         ? usable * (_currentOffset / _maxScrollExtent).clamp(0.0, 1.0)
         : 0.0;
+
+    final newNode = _findNearestNode();
+    if (newNode != _nearestNode) {
+      widget.onHintChanged?.call(newNode);
+    }
+
     setState(() {
       _hintCenterY = widget.style.padding.top + thumbTop + thumbH / 2;
-      _nearestNode = _findNearestNode();
+      _nearestNode = newNode;
     });
   }
 
@@ -284,7 +389,8 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
   double _getNodeRatio(int index) {
     if (widget.nodes.isEmpty) return 0.0;
     if (widget.extentRatioBuilder != null) {
-      return widget.extentRatioBuilder!(widget.nodes[index], index).clamp(0.0, 1.0);
+      return widget.extentRatioBuilder!(widget.nodes[index], index)
+          .clamp(0.0, 1.0);
     }
     if (widget.nodes.length > 1) {
       return (index / (widget.nodes.length - 1)).clamp(0.0, 1.0);
@@ -324,11 +430,13 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
   void _onDragStart(DragStartDetails details) {
     _isDragging = true;
     _painter.isDragging = true;
+    _fadeoutTimer?.cancel();
     // ⭐ 快照当前的 maxScrollExtent 作为拖拽期间的击结小，
     // 后续拖拽期间即使 SliverGrid 懒加载布局导致 maxScrollExtent 振荡，
     // _dyToOffset 也始终使用这个稳定的分母计算目标位置，不会陷入振荡循环。
     _dragMaxScrollExtent = _maxScrollExtent;
     _hintFade.forward();
+    _thumbFade.forward();
     if (widget.showTicksOnDragOnly) {
       _tickFade.forward();
     }
@@ -343,12 +451,10 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
   }
 
   void _onDragUpdate(DragUpdateDetails details) {
-    final box =
-        _scrollbarKey.currentContext?.findRenderObject() as RenderBox?;
+    final box = _scrollbarKey.currentContext?.findRenderObject() as RenderBox?;
     if (box == null) return;
     final local = box.globalToLocal(details.globalPosition);
-    final dy = (local.dy - widget.style.padding.top)
-        .clamp(0.0, _trackHeight);
+    final dy = (local.dy - widget.style.padding.top).clamp(0.0, _trackHeight);
     final target = _dyToOffset(dy, _trackHeight);
 
     if (widget.controller.hasClients) {
@@ -364,16 +470,17 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
     if (widget.showTicksOnDragOnly) {
       _tickFade.reverse();
     }
+    if (!widget.thumbVisibility) {
+      _startFadeoutTimer();
+    }
     setState(() {});
   }
 
   void _onTapUp(TapUpDetails details) {
-    final box =
-        _scrollbarKey.currentContext?.findRenderObject() as RenderBox?;
+    final box = _scrollbarKey.currentContext?.findRenderObject() as RenderBox?;
     if (box == null) return;
     final local = box.globalToLocal(details.globalPosition);
-    final dy = (local.dy - widget.style.padding.top)
-        .clamp(0.0, _trackHeight);
+    final dy = (local.dy - widget.style.padding.top).clamp(0.0, _trackHeight);
 
     // 如果刻度已经可见，优先检查点击节点
     // (如果设置了 showTicksOnDragOnly 且不在拖拽状态，理论上用户看不见刻度线，但为方便可能仍然响应点击。
@@ -384,8 +491,7 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
         final usable = _trackHeight - thumbH;
         final nodeOffset = _getNodeRatio(i) * _maxScrollExtent;
         final nodeY = _maxScrollExtent > 0
-            ? usable *
-                    (nodeOffset / _maxScrollExtent).clamp(0.0, 1.0) +
+            ? usable * (nodeOffset / _maxScrollExtent).clamp(0.0, 1.0) +
                 thumbH / 2
             : 0.0;
         if ((dy - nodeY).abs() <= widget.nodeTapTolerance) {
@@ -425,31 +531,24 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
             ? widget.style.majorTickLength
             : widget.style.minorTickLength)
         : 0.0;
-    final labelWidth = (hasNodes && widget.style.labelStyle != null) ? 36.0 : 0.0;
-    
+    final labelWidth =
+        (hasNodes && widget.style.labelStyle != null) ? 36.0 : 0.0;
+
     // 如果 nodes 为空（简单模式），完全不需要预留刻度和标签的宽度
     final scrollbarWidth = widget.style.thumbWidth +
         (hasNodes ? (maxTickLen + labelWidth) : 0.0) +
         widget.style.padding.horizontal;
 
-    // 与 Flutter RawScrollbar 相同的实现方式：
-    // 用 NotificationListener 监听 ScrollMetrics 变化，接收来自 Flutter 滚动系统的
-    // 一致性快照（pixels / maxScrollExtent / viewportDimension 同帧写入），
-    // 避免 controller.addListener 中异步读取导致的三值不一致问题。
-    return NotificationListener<ScrollMetricsNotification>(
-      onNotification: (n) {
-        _updateFromMetrics(n.metrics);
-        return false; // 不消耗，让事件继续冒泡
-      },
-      child: NotificationListener<ScrollUpdateNotification>(
-        onNotification: (n) {
-          _updateFromMetrics(n.metrics);
-          return false;
-        },
-        child: Stack(
-          children: [
-            // ── 主内容 ─────────────────────────────────────────────────────────
-            widget.child,
+    return Stack(
+      children: [
+        NotificationListener<ScrollNotification>(
+          onNotification: (notification) {
+            _updateFromMetrics(notification.metrics);
+            _showThumb();
+            return false;
+          },
+          child: widget.child,
+        ),
 
         // ── Scrollbar（右侧固定列） ─────────────────────────────────────────
         Positioned(
@@ -466,15 +565,15 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
             onTapUp: _onTapUp,
             child: LayoutBuilder(
               builder: (context, constraints) {
-                // 延迟同步 viewport 尺寸
                 SchedulerBinding.instance.addPostFrameCallback((_) {
                   if (mounted) _syncExtents();
                 });
-                
+
                 final trackHeight = constraints.maxHeight;
                 final thumbH = _calcThumbHeight(trackHeight);
                 final usable = trackHeight - thumbH;
-                final bool showLabels = widget.nodeLabelBuilder != null && widget.nodes.isNotEmpty;
+                final bool showLabels =
+                    widget.nodeLabelBuilder != null && widget.nodes.isNotEmpty;
                 final trackRightPadding = widget.style.padding.right;
 
                 final paintWidget = RepaintBoundary(
@@ -498,19 +597,24 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
                         if (tickOpacity > 0)
                           ...List.generate(widget.nodes.length, (i) {
                             final node = widget.nodes[i];
-                            final nodeOffset = _getNodeRatio(i) * _maxScrollExtent;
+                            final nodeOffset =
+                                _getNodeRatio(i) * _maxScrollExtent;
                             final nodeY = _maxScrollExtent > 0
-                                ? usable * (nodeOffset / _maxScrollExtent).clamp(0.0, 1.0) + thumbH / 2
+                                ? usable *
+                                        (nodeOffset / _maxScrollExtent)
+                                            .clamp(0.0, 1.0) +
+                                    thumbH / 2
                                 : 0.0;
 
                             return Positioned(
                               right: maxTickLen + trackRightPadding + 4,
-                              top: nodeY - 100, // 设定很大一块空间来使用 Center 对齐
+                              top: nodeY - 100,
                               height: 200,
                               child: Opacity(
                                 opacity: tickOpacity,
                                 child: Center(
-                                  child: widget.nodeLabelBuilder!(context, node, i),
+                                  child: widget.nodeLabelBuilder!(
+                                      context, node, i),
                                 ),
                               ),
                             );
@@ -533,7 +637,7 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
                 right: widget.scrollbarMarginEnd + scrollbarWidth + 4,
                 top: widget.scrollbarMarginTop,
                 bottom: widget.scrollbarMarginBottom,
-                child: IgnorePointer( // 防止阻挡滑动手势
+                child: IgnorePointer(
                   child: FadeTransition(
                     opacity: _hintFade,
                     child: Align(
@@ -552,9 +656,7 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
             },
             child: _buildHint(),
           ),
-        ],
-        ),
-      ),
+      ],
     );
   }
 
