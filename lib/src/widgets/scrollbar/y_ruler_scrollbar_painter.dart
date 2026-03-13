@@ -140,21 +140,35 @@ class YRulerScrollbarPainter extends ChangeNotifier
     final trackTop = _style.padding.top;
     final trackHeight =
         (size.height - _style.padding.vertical).clamp(0.0, size.height);
-    final trackWidth =
-        (size.width - _style.padding.horizontal).clamp(0.0, size.width);
+
+    // 0. 绘制整体热区背景（用于调试或特定 UI 需求）
+    if (_style.hitTestBackgroundColor.alpha > 0) {
+      canvas.drawRect(
+        Offset.zero & size,
+        Paint()..color = _style.hitTestBackgroundColor,
+      );
+    }
+
+    // 默认的视觉内容宽度（不包含热区外的留白）
+    final visualWidth = size.width - _style.padding.horizontal;
+    // 实际绘制轨道的宽度：如果 style 指定了则用 style 的，否则用当前画布宽度
+    final trackWidth = (_style.trackWidth ?? visualWidth).clamp(0.0, size.width);
+
+    // 计算轨道和内容应该绘制在画布的哪个水平坐标（右对齐）
+    final contentLeft = size.width - _style.padding.right - trackWidth;
 
     // 1. Track 背景（始终可见，不受 tickOpacity 影响）
     if (_style.showTrack) {
       final trackRect = Rect.fromLTWH(
-        _style.padding.left,
+        contentLeft,
         trackTop,
         trackWidth,
         trackHeight,
       );
       canvas.drawRect(trackRect, Paint()..color = _style.trackColor);
       canvas.drawLine(
-        Offset(_style.padding.left, trackTop),
-        Offset(_style.padding.left, trackTop + trackHeight),
+        Offset(contentLeft, trackTop),
+        Offset(contentLeft, trackTop + trackHeight),
         Paint()
           ..color = _style.trackBorderColor
           ..strokeWidth = 0.5,

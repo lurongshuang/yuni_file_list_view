@@ -157,11 +157,6 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
   // 控制刻度线的淡入淡出
   late AnimationController _tickFade;
 
-  // 平滑过度 maxScrollExtent 变化，解决 Sliver 列表估算抖动导致的跳变
-  late AnimationController _maxScrollExtentController;
-  late Animation<double> _maxScrollExtentAnimation;
-  double _displayMaxScrollExtent = 0;
-
   // 定时隐藏滑块
   Timer? _fadeoutTimer;
 
@@ -207,19 +202,6 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
     _tickFade.addListener(() {
       _painter.tickOpacity = _tickFade.value;
       _markNeedsPaint();
-    });
-
-    _maxScrollExtentController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 150),
-    );
-
-    _maxScrollExtentAnimation = const AlwaysStoppedAnimation(0.0);
-
-    _maxScrollExtentController.addListener(() {
-      setState(() {
-        _displayMaxScrollExtent = _maxScrollExtentAnimation.value;
-      });
     });
 
     _thumbFade.addListener(() {
@@ -293,7 +275,6 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
     _hintFade.dispose();
     _thumbFade.dispose();
     _tickFade.dispose();
-    _maxScrollExtentController.dispose();
     _fadeoutTimer?.cancel();
     super.dispose();
   }
@@ -315,29 +296,11 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
     // 原因：SliverGrid 懒加载布局会常常导致 maxScrollExtent 在两个局部最小値之间振荡。
     // 若拖拽期间允许更新，_dyToOffset 会用不同分母重算目标位置，导致 jumpTo 揥动布局再变，弖入正反馈振荡。
     if (!_isDragging) {
-      final double newMax = metrics.maxScrollExtent;
-      if (newMax != _maxScrollExtent) {
-        // 如果是初始状态或跳变过大，直接同步
-        if (_maxScrollExtent == 0 || (newMax - _maxScrollExtent).abs() > metrics.viewportDimension) {
-          _maxScrollExtent = newMax;
-          _displayMaxScrollExtent = newMax;
-        } else {
-          // 否则平滑过渡
-          _maxScrollExtent = newMax;
-          _maxScrollExtentAnimation = Tween<double>(
-            begin: _displayMaxScrollExtent,
-            end: newMax,
-          ).animate(CurvedAnimation(
-            parent: _maxScrollExtentController,
-            curve: Curves.easeOutCubic,
-          ));
-          _maxScrollExtentController.forward(from: 0);
-        }
-      }
+      _maxScrollExtent = metrics.maxScrollExtent;
     }
 
     _painter.scrollOffset = _currentOffset;
-    _painter.maxScrollExtent = _displayMaxScrollExtent;
+    _painter.maxScrollExtent = _maxScrollExtent;
     _painter.viewportExtent = _viewportExtent;
 
     if (widget.enableDebugLog) {
@@ -396,9 +359,8 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
   }
 
   double _calcThumbHeight(double trackHeight) {
-    // 使用 _displayMaxScrollExtent 参与计算，确保 Thumb 高度也随之平滑变化
-    final total = _viewportExtent + _displayMaxScrollExtent;
-    if (total <= 0 || _displayMaxScrollExtent <= 0) return trackHeight;
+    final total = _viewportExtent + _maxScrollExtent;
+    if (total <= 0 || _maxScrollExtent <= 0) return trackHeight;
     final visibleRatio = _viewportExtent / total;
     final raw = trackHeight * visibleRatio;
     final clamped = raw.clamp(
@@ -417,8 +379,8 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
     if (trackHeight <= 0) return;
     final thumbH = _calcThumbHeight(trackHeight);
     final usable = trackHeight - thumbH;
-    final thumbTop = _displayMaxScrollExtent > 0
-        ? usable * (_currentOffset / _displayMaxScrollExtent).clamp(0.0, 1.0)
+    final thumbTop = _maxScrollExtent > 0
+        ? usable * (_currentOffset / _maxScrollExtent).clamp(0.0, 1.0)
         : 0.0;
 
     final newNode = _findNearestNode();
@@ -448,18 +410,18 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
   /// 从节点列表中找到离当前 scrollOffset 最近的节点
   YRulerScrollbarNode? _findNearestNode() {
     if (widget.nodes.isEmpty) return null;
-    int nearestIndex = -1;
-    double minDiff = double.infinity;
-
+    YRulerScrollbarNode? best;
+    double bestDist = double.infinity;
     for (int i = 0; i < widget.nodes.length; i++) {
-      final nodeOffset = _getNodeRatio(i) * _displayMaxScrollExtent;
-      final diff = (nodeOffset - _currentOffset).abs();
-      if (diff < minDiff) {
-        minDiff = diff;
-        nearestIndex = i;
+      final node = widget.nodes[i];
+      final nodeOffset = _getNodeRatio(i) * _maxScrollExtent;
+      final d = (nodeOffset - _currentOffset).abs();
+      if (d < bestDist) {
+        bestDist = d;
+        best = node;
       }
     }
-    return nearestIndex == -1 ? null : widget.nodes[nearestIndex];
+    return best;
   }
 
   /// 获取当前轨道高度（依赖 RenderBox，安全访问）
@@ -536,9 +498,9 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
       final thumbH = _calcThumbHeight(_trackHeight);
       for (int i = 0; i < widget.nodes.length; i++) {
         final usable = _trackHeight - thumbH;
-        final nodeOffset = _getNodeRatio(i) * _displayMaxScrollExtent;
-        final nodeY = _displayMaxScrollExtent > 0
-            ? usable * (nodeOffset / _displayMaxScrollExtent).clamp(0.0, 1.0) +
+        final nodeOffset = _getNodeRatio(i) * _maxScrollExtent;
+        final nodeY = _maxScrollExtent > 0
+            ? usable * (nodeOffset / _maxScrollExtent).clamp(0.0, 1.0) +
                 thumbH / 2
             : 0.0;
         if ((dy - nodeY).abs() <= widget.nodeTapTolerance) {
@@ -582,9 +544,14 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
         (hasNodes && widget.style.labelStyle != null) ? 36.0 : 0.0;
 
     // 如果 nodes 为空（简单模式），完全不需要预留刻度和标签的宽度
-    final scrollbarWidth = widget.style.thumbWidth +
+    final visualWidth = widget.style.thumbWidth +
         (hasNodes ? (maxTickLen + labelWidth) : 0.0) +
         widget.style.padding.horizontal;
+
+    // 实际的点击热区宽度
+    final scrollbarWidth = (widget.style.hitTestWidth != null)
+        ? widget.style.hitTestWidth!.clamp(visualWidth, double.infinity)
+        : visualWidth;
 
     return Stack(
       children: [
@@ -602,77 +569,77 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
           top: widget.scrollbarMarginTop,
           bottom: widget.scrollbarMarginBottom,
           right: widget.scrollbarMarginEnd,
-          width: scrollbarWidth,
-          child: GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onVerticalDragStart: _onDragStart,
-            onVerticalDragUpdate: _onDragUpdate,
-            onVerticalDragEnd: _onDragEnd,
-            onVerticalDragCancel: _onDragEnd,
-            onTapUp: _onTapUp,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                SchedulerBinding.instance.addPostFrameCallback((_) {
-                  if (mounted) _syncExtents();
-                });
+        width: scrollbarWidth,
+        child: GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onVerticalDragStart: _onDragStart,
+          onVerticalDragUpdate: _onDragUpdate,
+          onVerticalDragEnd: _onDragEnd,
+          onVerticalDragCancel: _onDragEnd,
+          onTapUp: _onTapUp,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              SchedulerBinding.instance.addPostFrameCallback((_) {
+                if (mounted) _syncExtents();
+              });
 
-                final trackHeight = constraints.maxHeight;
-                final thumbH = _calcThumbHeight(trackHeight);
-                final usable = trackHeight - thumbH;
-                final bool showLabels =
-                    widget.nodeLabelBuilder != null && widget.nodes.isNotEmpty;
-                final trackRightPadding = widget.style.padding.right;
+              final trackHeight = constraints.maxHeight;
+              final thumbH = _calcThumbHeight(trackHeight);
+              final usable = trackHeight - thumbH;
+              final bool showLabels =
+                  widget.nodeLabelBuilder != null && widget.nodes.isNotEmpty;
+              final trackRightPadding = widget.style.padding.right;
 
-                final paintWidget = RepaintBoundary(
-                  child: CustomPaint(
-                    key: _scrollbarKey,
-                    painter: _painter,
-                    size: Size(scrollbarWidth, trackHeight),
-                  ),
-                );
+              final paintWidget = RepaintBoundary(
+                child: CustomPaint(
+                  key: _scrollbarKey,
+                  painter: _painter,
+                  size: Size(scrollbarWidth, trackHeight),
+                ),
+              );
 
-                if (!showLabels) return paintWidget;
+              if (!showLabels) return paintWidget;
 
-                return AnimatedBuilder(
-                  animation: _tickFade,
-                  builder: (context, child) {
-                    final tickOpacity = _tickFade.value;
-                    return Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        paintWidget,
-                        if (tickOpacity > 0)
-                          ...List.generate(widget.nodes.length, (i) {
-                            final node = widget.nodes[i];
-                            final nodeOffset =
-                                _getNodeRatio(i) * _displayMaxScrollExtent;
-                            final nodeY = _displayMaxScrollExtent > 0
-                                ? usable *
-                                        (nodeOffset / _displayMaxScrollExtent)
-                                            .clamp(0.0, 1.0) +
-                                    thumbH / 2
-                                : 0.0;
+              return AnimatedBuilder(
+                animation: _tickFade,
+                builder: (context, child) {
+                  final tickOpacity = _tickFade.value;
+                  return Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      paintWidget,
+                      if (tickOpacity > 0)
+                        ...List.generate(widget.nodes.length, (i) {
+                          final node = widget.nodes[i];
+                          final nodeOffset =
+                              _getNodeRatio(i) * _maxScrollExtent;
+                          final nodeY = _maxScrollExtent > 0
+                              ? usable *
+                                      (nodeOffset / _maxScrollExtent)
+                                          .clamp(0.0, 1.0) +
+                                  thumbH / 2
+                              : 0.0;
 
-                            return Positioned(
-                              right: maxTickLen + trackRightPadding + 4,
-                              top: nodeY - 100,
-                              height: 200,
-                              child: Opacity(
-                                opacity: tickOpacity,
-                                child: Center(
-                                  child: widget.nodeLabelBuilder!(
-                                      context, node, i),
-                                ),
+                          return Positioned(
+                            right: maxTickLen + trackRightPadding + 4,
+                            top: nodeY - 100,
+                            height: 200,
+                            child: Opacity(
+                              opacity: tickOpacity,
+                              child: Center(
+                                child:
+                                    widget.nodeLabelBuilder!(context, node, i),
                               ),
-                            );
-                          }),
-                      ],
-                    );
-                  },
-                );
-              },
-            ),
+                            ),
+                          );
+                        }),
+                    ],
+                  );
+                },
+              );
+            },
           ),
+        ),
         ),
 
         // ── 左侧浮动提示（仅拖拽时可见） ────────────────────────────────────

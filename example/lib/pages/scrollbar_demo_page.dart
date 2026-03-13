@@ -92,6 +92,8 @@ class __SimpleScrollbarDemoState extends State<_SimpleScrollbarDemo> {
   double _fadeInMs = 100;
   double _fadeOutMs = 300;
   double _timeToFadeMs = 600;
+  double _hitTestWidth = 20.0;
+  double _trackWidth = 5.0;
 
   @override
   void dispose() {
@@ -117,6 +119,10 @@ class __SimpleScrollbarDemoState extends State<_SimpleScrollbarDemo> {
           _buildSlider('隐藏延迟 (ms)', _timeToFadeMs, 0, 3000,
               (v) => setState(() => _timeToFadeMs = v)),
         ],
+        _buildSlider('热区宽度 (dp)', _hitTestWidth, 0, 100,
+            (v) => setState(() => _hitTestWidth = v)),
+        _buildSlider('轨道宽度 (dp)', _trackWidth, 0, 100,
+            (v) => setState(() => _trackWidth = v)),
         Expanded(
           child: YRulerScrollbar(
             controller: _ctrl,
@@ -130,8 +136,11 @@ class __SimpleScrollbarDemoState extends State<_SimpleScrollbarDemo> {
                 thumbWidth: 5,
                 thumbMinHeight: 32,
                 showTrack: true,
-                trackColor: Colors.transparent,
-                trackBorderColor: Colors.transparent),
+                trackColor: Colors.black.withValues(alpha: 0.1),
+                trackBorderColor: Colors.transparent,
+                hitTestWidth: _hitTestWidth,
+                trackWidth: _trackWidth,
+                hitTestBackgroundColor: Colors.red.withValues(alpha: 0.1)),
             showHintOnDrag: false,
             child: ListView.builder(
               controller: _ctrl,

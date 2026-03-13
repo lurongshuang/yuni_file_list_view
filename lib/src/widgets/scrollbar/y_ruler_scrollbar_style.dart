@@ -58,6 +58,17 @@ class YRulerScrollbarStyle {
   /// Scrollbar 整体的内边距（上下会影响轨道高度）
   final EdgeInsets padding;
 
+  /// 交互热区宽度（由于滑块和刻度线可能很细，增加该值可扩大滑动触发范围）。
+  /// 单位 dp。如果不传，则默认为滑块+刻度线+标签占用的视觉总宽度。
+  final double? hitTestWidth;
+
+  /// 轨道背景宽度。如果不传，则默认跟随 [hitTestWidth]（即占满热区）。
+  final double? trackWidth;
+
+  /// 交互热区背景色。默认透明。
+  /// 设置此值可用于调试或在特定设计下为整个热区提供背景感。
+  final Color hitTestBackgroundColor;
+
   const YRulerScrollbarStyle({
     this.thumbColor = const Color(0xFFBBBBBB),
     this.thumbDraggingColor = const Color(0xFF888888),
@@ -74,6 +85,9 @@ class YRulerScrollbarStyle {
     this.minorTickLength = 8.0,
     this.labelStyle,
     this.padding = const EdgeInsets.symmetric(vertical: 0),
+    this.hitTestWidth,
+    this.trackWidth,
+    this.hitTestBackgroundColor = const Color(0x00000000),
   });
 
   /// 复制并覆盖部分属性
@@ -93,6 +107,9 @@ class YRulerScrollbarStyle {
     double? minorTickLength,
     TextStyle? labelStyle,
     EdgeInsets? padding,
+    double? hitTestWidth,
+    double? trackWidth,
+    Color? hitTestBackgroundColor,
   }) {
     return YRulerScrollbarStyle(
       thumbColor: thumbColor ?? this.thumbColor,
@@ -110,6 +127,10 @@ class YRulerScrollbarStyle {
       minorTickLength: minorTickLength ?? this.minorTickLength,
       labelStyle: labelStyle ?? this.labelStyle,
       padding: padding ?? this.padding,
+      hitTestWidth: hitTestWidth ?? this.hitTestWidth,
+      trackWidth: trackWidth ?? this.trackWidth,
+      hitTestBackgroundColor:
+          hitTestBackgroundColor ?? this.hitTestBackgroundColor,
     );
   }
 }
