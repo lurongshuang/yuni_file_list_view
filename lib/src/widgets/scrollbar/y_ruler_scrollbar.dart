@@ -110,6 +110,15 @@ class YRulerScrollbar extends StatefulWidget {
   /// 滑动停止后，滑块开始隐藏前的延迟等待时间，默认 600ms
   final Duration timeToFade;
 
+  /// 提示刻度节点列表；如果为 null，则默认使用 [nodes]。
+  /// 适用于尺子刻度线和拖拽提示需要不同单位的场景（如：月份尺子 + 天提示）。
+  final List<YRulerScrollbarNode>? hintNodes;
+
+  /// 用于提供指定提示节点的占比（0.0 ~ 1.0）。
+  /// 如果此回调为 null，默认行为是**均匀分布**（即按照 node 在 `hintNodes` 列表中的 index 等比划分）。
+  final double Function(YRulerScrollbarNode node, int index)?
+      hintExtentRatioBuilder;
+
   /// 提示文本切换的回调。可在此时触发震动等交互。
   final ValueChanged<YRulerScrollbarNode?>? onHintChanged;
 
@@ -119,10 +128,12 @@ class YRulerScrollbar extends StatefulWidget {
     required this.controller,
     this.style = const YRulerScrollbarStyle(),
     this.nodes = const [],
+    this.hintNodes,
     this.hintBuilder,
     this.showHintOnDrag = true,
     this.nodeLabelBuilder,
     this.extentRatioBuilder,
+    this.hintExtentRatioBuilder,
     this.showTicksOnDragOnly = true,
     this.scrollbarMarginEnd = 4.0,
     this.scrollbarMarginTop = 0.0,
@@ -175,6 +186,10 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
 
   /// 最近的节点（用于提示面板显示）
   YRulerScrollbarNode? _nearestNode;
+
+  /// 实际用于计算提示的节点列表
+  List<YRulerScrollbarNode> get _effectiveHintNodes =>
+      widget.hintNodes ?? widget.nodes;
 
   @override
   void initState() {
@@ -395,26 +410,36 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
   }
 
   /// 获取某个节点的位置比例
-  double _getNodeRatio(int index) {
-    if (widget.nodes.isEmpty) return 0.0;
-    if (widget.extentRatioBuilder != null) {
-      return widget.extentRatioBuilder!(widget.nodes[index], index)
-          .clamp(0.0, 1.0);
+  double _getNodeRatio(int index,
+      {List<YRulerScrollbarNode>? nodes,
+      double Function(YRulerScrollbarNode node, int index)? builder}) {
+    final targetNodes = nodes ?? widget.nodes;
+    final targetBuilder = builder ?? widget.extentRatioBuilder;
+
+    if (targetNodes.isEmpty) return 0.0;
+    if (targetBuilder != null) {
+      return targetBuilder(targetNodes[index], index).clamp(0.0, 1.0);
     }
-    if (widget.nodes.length > 1) {
-      return (index / (widget.nodes.length - 1)).clamp(0.0, 1.0);
+    if (targetNodes.length > 1) {
+      return (index / (targetNodes.length - 1)).clamp(0.0, 1.0);
     }
     return 0.0;
   }
 
   /// 从节点列表中找到离当前 scrollOffset 最近的节点
   YRulerScrollbarNode? _findNearestNode() {
-    if (widget.nodes.isEmpty) return null;
+    final nodes = _effectiveHintNodes;
+    if (nodes.isEmpty) return null;
+
     YRulerScrollbarNode? best;
     double bestDist = double.infinity;
-    for (int i = 0; i < widget.nodes.length; i++) {
-      final node = widget.nodes[i];
-      final nodeOffset = _getNodeRatio(i) * _maxScrollExtent;
+
+    final builder =
+        widget.hintNodes == null ? widget.extentRatioBuilder : widget.hintExtentRatioBuilder;
+
+    for (int i = 0; i < nodes.length; i++) {
+      final node = nodes[i];
+      final nodeOffset = _getNodeRatio(i, nodes: nodes, builder: builder) * _maxScrollExtent;
       final d = (nodeOffset - _currentOffset).abs();
       if (d < bestDist) {
         bestDist = d;

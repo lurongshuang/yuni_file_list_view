@@ -24,7 +24,7 @@ class _ScrollbarDemoPageState extends State<ScrollbarDemoPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
   }
 
   @override
@@ -49,6 +49,7 @@ class _ScrollbarDemoPageState extends State<ScrollbarDemoPage>
             Tab(text: '简单模式'),
             Tab(text: '节点刻度'),
             Tab(text: '完整演示'),
+            Tab(text: '节点分离'),
           ],
         ),
       ),
@@ -59,6 +60,7 @@ class _ScrollbarDemoPageState extends State<ScrollbarDemoPage>
             _SimpleScrollbarDemo(),
             _NodeScrollbarDemo(),
             _FullScrollbarDemo(),
+            _DivergedNodeScrollbarDemo(),
           ],
         ),
       ),
@@ -493,6 +495,108 @@ class __FullScrollbarDemoState extends State<_FullScrollbarDemo> {
             },
           ),
           const SliverToBoxAdapter(child: SizedBox(height: 24)),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tab 4: 节点分离演示（月级尺子 + 天级提示）
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _DivergedNodeScrollbarDemo extends StatefulWidget {
+  const _DivergedNodeScrollbarDemo();
+
+  @override
+  State<_DivergedNodeScrollbarDemo> createState() => __DivergedNodeScrollbarDemoState();
+}
+
+class __DivergedNodeScrollbarDemoState extends State<_DivergedNodeScrollbarDemo> {
+  final ScrollController _ctrl = ScrollController();
+
+  late final List<YFileGroup<YFileItem>> _months;
+  late final List<YFileGroup<YFileItem>> _days;
+  late final int _totalItems;
+
+  @override
+  void initState() {
+    super.initState();
+    _months = DemoData.getGroupsByDimension('month', items: DemoData.gridItems2);
+    _days = DemoData.getGroupsByDimension('day', items: DemoData.gridItems2);
+    _totalItems = _months.fold<int>(0, (sum, g) => sum + g.count);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return YRulerScrollbar(
+      controller: _ctrl,
+      // 尺子显示月级
+      nodes: _months,
+      extentRatioBuilder: (node, index) {
+        int absoluteIndex = 0;
+        for (int i = 0; i < index; i++) {
+          absoluteIndex += _months[i].count;
+        }
+        return absoluteIndex / _totalItems;
+      },
+      // 提示显示天级
+      hintNodes: _days,
+      hintExtentRatioBuilder: (node, index) {
+        int absoluteIndex = 0;
+        for (int i = 0; i < index; i++) {
+          absoluteIndex += _days[i].count;
+        }
+        return absoluteIndex / _totalItems;
+      },
+      showHintOnDrag: true,
+      style: YRulerScrollbarStyle(
+        thumbColor: Colors.orange.withValues(alpha: 0.45),
+        thumbDraggingColor: Colors.orange,
+        thumbWidth: 4,
+        showTrack: true,
+        trackColor: Colors.grey.withValues(alpha: 0.06),
+        labelStyle: const TextStyle(
+          fontSize: 10,
+          color: Colors.orange,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      child: CustomScrollView(
+        controller: _ctrl,
+        slivers: [
+          SliverYFileGroupedList<YFileItem>(
+            groups: _days,
+            config: const YFileGroupedConfig(
+              mode: YFileGroupedMode.list,
+              pinnedHeader: true,
+              groupHeaderHeight: 40,
+            ),
+            headerBuilder: (context, group, groupIndex) {
+              return Container(
+                height: 40,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                alignment: Alignment.centerLeft,
+                color: Colors.orange.shade50,
+                child: Text(
+                  group.groupTitle,
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                ),
+              );
+            },
+            itemBuilder: (context, group, item, groupIndex, itemIndex) {
+              return ListTile(
+                title: Text(item.name),
+                subtitle: Text('ID: ${item.id}'),
+              );
+            },
+          ),
         ],
       ),
     );
