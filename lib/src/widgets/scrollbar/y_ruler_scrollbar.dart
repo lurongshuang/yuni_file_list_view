@@ -549,8 +549,10 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
         widget.style.padding.horizontal;
 
     // 实际的点击热区宽度
+    // 如果指定了 hitTestWidth，则以此为准（但至少要有 thumb 的宽度以保证基本交互）
     final scrollbarWidth = (widget.style.hitTestWidth != null)
-        ? widget.style.hitTestWidth!.clamp(visualWidth, double.infinity)
+        ? widget.style.hitTestWidth!
+            .clamp(widget.style.thumbWidth + widget.style.padding.horizontal, double.infinity)
         : visualWidth;
 
     return Stack(

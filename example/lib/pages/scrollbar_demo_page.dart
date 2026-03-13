@@ -141,7 +141,7 @@ class __SimpleScrollbarDemoState extends State<_SimpleScrollbarDemo> {
                 hitTestWidth: _hitTestWidth,
                 trackWidth: _trackWidth,
                 hitTestBackgroundColor: Colors.red.withValues(alpha: 0.1)),
-            showHintOnDrag: false,
+            showHintOnDrag: true,
             child: ListView.builder(
               controller: _ctrl,
               padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 12),
@@ -270,6 +270,9 @@ class __NodeScrollbarDemoState extends State<_NodeScrollbarDemo> {
         thumbWidth: 4,
         thumbMinHeight: 28,
         showTrack: true,
+        trackWidth: 20,
+        hitTestWidth: 20,
+        hitTestBackgroundColor: Colors.red.withValues(alpha: 0.2),
         trackColor: Colors.grey.withValues(alpha: 0.06),
         trackBorderColor: Colors.grey.withValues(alpha: 0.15),
         tickColor: Colors.teal.withValues(alpha: 0.5),
