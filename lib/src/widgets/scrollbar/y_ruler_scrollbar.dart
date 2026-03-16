@@ -10,12 +10,23 @@ export 'y_ruler_scrollbar_hint.dart';
 export 'y_ruler_scrollbar_node.dart';
 export 'y_ruler_scrollbar_style.dart';
 
-/// 用于自定义每个刻度节点的标签内容构建器
 typedef YScrollbarNodeLabelBuilder = Widget Function(
   BuildContext context,
   YRulerScrollbarNode node,
   int index,
 );
+
+/// Scrollbar 交互状态
+enum YScrollbarInteractionState {
+  /// 手指按下
+  down,
+
+  /// 手指滑动
+  move,
+
+  /// 手指抬起（或取消）
+  up,
+}
 
 /// 类「iOS 相册」风格的可扩展 Scrollbar，支持：
 ///
@@ -145,8 +156,16 @@ class YRulerScrollbar extends StatefulWidget {
     this.fadeOutDuration = const Duration(milliseconds: 300),
     this.timeToFade = const Duration(milliseconds: 1000),
     this.onHintChanged,
+    this.onInteraction,
     this.enableDebugLog = false,
   });
+
+  /// 交互状态变化的回调。
+  /// [YScrollbarInteractionState.down]：手指按下轨道或滑块
+  /// [YScrollbarInteractionState.move]：手指在轨道上滑动
+  /// [YScrollbarInteractionState.up]：手指抬起或交互取消
+  final void Function(YScrollbarInteractionState state, Offset localPosition)?
+      onInteraction;
 
   /// 是否开启坐标变化日志，用于排查跳变问题，默认 false
   final bool enableDebugLog;
@@ -175,6 +194,9 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
   double _maxScrollExtent = 0;
   double _viewportExtent = 0;
   bool _isDragging = false;
+
+  /// 记录最近一次的手指位置，用于在 DragEnd 或 DragCancel 时提供坐标快照
+  Offset _lastLocalPosition = Offset.zero;
 
   /// 拖拽开始时快照的 maxScrollExtent。
   /// 拖拽期间使用这个冻结小来计算 target，避免 SliverGrid 懒加载布局调整导致 maxScrollExtent
@@ -466,9 +488,11 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
     _painter.isDragging = true;
     _fadeoutTimer?.cancel();
     // ⭐ 快照当前的 maxScrollExtent 作为拖拽期间的击结小，
-    // 后续拖拽期间即使 SliverGrid 懒加载布局导致 maxScrollExtent 振荡，
     // _dyToOffset 也始终使用这个稳定的分母计算目标位置，不会陷入振荡循环。
     _dragMaxScrollExtent = _maxScrollExtent;
+    _lastLocalPosition = details.localPosition;
+    widget.onInteraction
+        ?.call(YScrollbarInteractionState.down, details.localPosition);
     _hintFade.forward();
     _thumbFade.forward();
     if (widget.showTicksOnDragOnly) {
@@ -494,12 +518,15 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
     if (widget.controller.hasClients) {
       widget.controller.jumpTo(target.clamp(0.0, _maxScrollExtent));
     }
+    _lastLocalPosition = local;
+    widget.onInteraction?.call(YScrollbarInteractionState.move, local);
     _updateHintPosition();
   }
 
   void _onDragEnd([DragEndDetails? _]) {
     _isDragging = false;
     _painter.isDragging = false;
+    widget.onInteraction?.call(YScrollbarInteractionState.up, _lastLocalPosition);
     _hintFade.reverse();
     if (widget.showTicksOnDragOnly) {
       _tickFade.reverse();
@@ -598,12 +625,25 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
           right: widget.scrollbarMarginEnd,
         width: scrollbarWidth,
         child: GestureDetector(
-          behavior: HitTestBehavior.translucent,
+          key: const Key('y_ruler_scrollbar_gesture_detector'),
+          behavior: HitTestBehavior.opaque,
           onVerticalDragStart: _onDragStart,
           onVerticalDragUpdate: _onDragUpdate,
           onVerticalDragEnd: _onDragEnd,
           onVerticalDragCancel: _onDragEnd,
-          onTapUp: _onTapUp,
+          onTapDown: (details) {
+            _lastLocalPosition = details.localPosition;
+            widget.onInteraction
+                ?.call(YScrollbarInteractionState.down, details.localPosition);
+          },
+          onTapUp: (details) {
+            _lastLocalPosition = details.localPosition;
+            _onTapUp(details);
+            widget.onInteraction
+                ?.call(YScrollbarInteractionState.up, details.localPosition);
+          },
+          onTapCancel: () => widget.onInteraction
+              ?.call(YScrollbarInteractionState.up, _lastLocalPosition),
           child: LayoutBuilder(
             builder: (context, constraints) {
               SchedulerBinding.instance.addPostFrameCallback((_) {

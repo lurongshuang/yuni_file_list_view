@@ -369,6 +369,10 @@ class __FullScrollbarDemoState extends State<_FullScrollbarDemo> {
           debugPrint('Scrollbar node changed to: ${node.label}');
         }
       },
+      onInteraction: (state, offset) {
+        // 演示：拦截交互周期并传递坐标
+        debugPrint('Scrollbar Interaction: $state at $offset');
+      },
       showHintOnDrag: true,
       hintBuilder: (context, node, offset) {
         if (node == null) return const SizedBox.shrink();
