@@ -448,27 +448,33 @@ class _YRulerScrollbarState extends State<YRulerScrollbar>
     return 0.0;
   }
 
-  /// 从节点列表中找到离当前 scrollOffset 最近的节点
+  /// 从节点列表中找到“当前活跃”的节点（即列表顶部对应的节点）
   YRulerScrollbarNode? _findNearestNode() {
     final nodes = _effectiveHintNodes;
     if (nodes.isEmpty) return null;
 
-    YRulerScrollbarNode? best;
-    double bestDist = double.infinity;
-
     final builder =
         widget.hintNodes == null ? widget.extentRatioBuilder : widget.hintExtentRatioBuilder;
 
+    YRulerScrollbarNode? best;
+    
+    // 逻辑变更：不再寻找物理距离最近的，而是寻找“最后一个起始位置小于等于当前 offset”的节点。
+    // 这代表了列表中“当前最上方”正在展示的内容。
     for (int i = 0; i < nodes.length; i++) {
       final node = nodes[i];
       final nodeOffset = _getNodeRatio(i, nodes: nodes, builder: builder) * _maxScrollExtent;
-      final d = (nodeOffset - _currentOffset).abs();
-      if (d < bestDist) {
-        bestDist = d;
+      
+      // 添加一个微小的容差（1px），避免因为浮点数精度导致的在 0 位置时的判断问题
+      if (nodeOffset <= _currentOffset + 1.0) {
         best = node;
+      } else {
+        // 因为节点列表通常是按偏移量升序排列的，一旦超过当前偏移量就可以停止搜索
+        break;
       }
     }
-    return best;
+    
+    // 如果还没滑到第一个节点（比如有 Header 填充），则默认返回第一个节点
+    return best ?? nodes.first;
   }
 
   /// 获取当前轨道高度（依赖 RenderBox，安全访问）

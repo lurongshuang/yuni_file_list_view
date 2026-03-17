@@ -274,12 +274,27 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
           showTrack: false,
         ),
         extentRatioBuilder: (node, index) {
-          int absoluteIndex = 0;
+          // 每个 Group 的高度 = Header (46) + Items (crossAxisCount 相关)
+          // 这里做一个估算的物理高度比例，比单纯用 item count 更准
+          double currentPhysicalOffset = 0;
           for (int i = 0; i < index; i++) {
-            absoluteIndex += groups[i].count;
+            final g = groups[i];
+            const headerH = 46.0;
+            // 简单估算：grid 下每行高度约等于宽度，这里假设一个固定比例或使用固定高度
+            final rows = (g.count / crossAxisCount).ceil();
+            final rowH = _mode == YFileGroupedMode.grid ? 100.0 : 72.0; // 这里的 100 是估算的 grid item 高
+            currentPhysicalOffset += headerH + (rows * rowH);
           }
-          final total = groups.fold<int>(0, (sum, g) => sum + g.count);
-          return total == 0 ? 0.0 : absoluteIndex / total;
+
+          double totalPhysicalHeight = 0;
+          for (var g in groups) {
+            const headerH = 46.0;
+            final rows = (g.count / crossAxisCount).ceil();
+            final rowH = _mode == YFileGroupedMode.grid ? 100.0 : 72.0;
+            totalPhysicalHeight += headerH + (rows * rowH);
+          }
+
+          return totalPhysicalHeight == 0 ? 0.0 : (currentPhysicalOffset / totalPhysicalHeight).clamp(0.0, 1.0);
         },
         nodeLabelBuilder: (context, node, index) {
           if (!node.isMajor) return const SizedBox.shrink();
