@@ -8,6 +8,7 @@ import 'photo_gallery_demo_page.dart';
 import 'desktop_list_demo_page.dart';
 import 'advanced_desktop_demo_page.dart';
 import 'scrollbar_demo_page.dart';
+import 'multi_dimension_demo_page.dart';
 
 class DemoHomePage extends StatelessWidget {
   const DemoHomePage({super.key});
@@ -102,6 +103,15 @@ class DemoHomePage extends StatelessWidget {
             icon: Icons.straighten,
             color: Colors.deepPurple,
             page: const ScrollbarDemoPage(),
+          ),
+          const SizedBox(height: 16),
+          _buildCard(
+            context,
+            title: '10. Premium 多维度分组 (New)',
+            subtitle: '毛玻璃吸顶、动态数据负载、各维度平滑切换',
+            icon: Icons.auto_awesome,
+            color: Colors.orange,
+            page: const MultiDimensionDemoPage(),
           ),
         ],
       ),

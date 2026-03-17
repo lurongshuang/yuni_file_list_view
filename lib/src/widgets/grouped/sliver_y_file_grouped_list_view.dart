@@ -70,7 +70,7 @@ class SliverYFileGroupedList<T> extends StatelessWidget {
         // 使用 GlobalObjectKey 绑定数据实体，杜绝跨刷新树变更引起的指针丢失
         final groupKeys = <int, GlobalKey>{};
         for (var i = 1; i < groups.length; i++) {
-          groupKeys[i] = GlobalObjectKey(groups[i]);
+          groupKeys[i] = GlobalObjectKey(groups[i].groupId);
         }
 
         return SliverMainAxisGroup(
@@ -283,47 +283,30 @@ class _PinnedHeaderContentState<T>
     if (widget.groups.isEmpty) return 0;
     final len = widget.groups.length;
 
-    // A. 探测向下滚动 (索引增加)
-    if (_currentGroupIndex + 1 < len) {
-      final nextDy = _getGroupHeaderDy(_currentGroupIndex + 1);
-      if (nextDy != null && nextDy <= headerY + 0.5) {
-        // 当前组已被“顶”出，向下寻找最后一个已越过吸顶线的 header
-        for (int i = _currentGroupIndex + 1; i < len; i++) {
-          final dy = _getGroupHeaderDy(i);
-          if (dy == null) continue; // 尚未进入渲染区
-          if (dy > headerY + 0.5) return i - 1; // 发现第一个还在下方的，返回其前一组
-          if (i == len - 1) return i;
-        }
-      }
-    }
-
-    // B. 探测向上滚动 (索引减小)
-    if (_currentGroupIndex > 0) {
-      final curDy = _getGroupHeaderDy(_currentGroupIndex);
-      if (curDy != null && curDy > headerY + 0.5) {
-        // 当前组标题被拉到了吸顶线下方，向上追溯
-        for (int i = _currentGroupIndex - 1; i >= 1; i--) {
-          final dy = _getGroupHeaderDy(i);
-          if (dy == null) continue;
-          if (dy <= headerY + 0.5) return i;
-        }
-        return 0;
-      }
-    }
-
-    // C. 兜底扫描：用于 IndexedStack 切换或极速跳跃滑动
-    // 虽然是全量循环，但 ctx == null 拦截了 99.9% 的逻辑，执行开销极低
-    for (var i = 1; i < len; i++) {
+    // 1. 尝试从已知渲染的 Header 中寻找分界线
+    // 这里的全量循环开销极低，因为 _getGroupHeaderDy 内部的 key.currentContext 
+    // 会拦截 99% 的无效检测。
+    int? lastAbove;
+    for (int i = 1; i < len; i++) {
       final dy = _getGroupHeaderDy(i);
       if (dy == null) continue;
+
       if (dy > headerY + 0.5) {
+        // 发现第一个在吸顶线之下的 Header，则其前一个组就是当前活动组
         return i - 1;
       }
-      if (i == len - 1) return i;
+      lastAbove = i;
     }
 
-    // 保持现状 (通常发生在组内容极长，屏幕内没有任何标题时)
-    return _currentGroupIndex;
+    // 2. 如果循环结束，所有已渲染的 Header 都在吸顶线之上
+    if (lastAbove != null) {
+      // 那么当前活动组至少是 lastAbove 对应的组
+      return lastAbove;
+    }
+
+    // 3. 兜底逻辑：如果没有探测到任何 Header 渲染，或者探测失败
+    // 在大规模数据变动时，保留当前索引并尝试在下一帧重新校准。
+    return _currentGroupIndex.clamp(0, len - 1).toInt();
   }
 
   /// 获取指定索引 header 的当前全局垂直坐标，不可见或未渲染则返回 null
