@@ -1,6 +1,6 @@
 name: yuni_file_list_view
 description: "A Flutter package providing flexible file list view components: grid, list, and grouped grid layouts with Sliver support."
-version: 0.1.6
+version: 0.1.7
 homepage: https://github.com/lurongshuang/yuni_file_list_view
 
 environment:
