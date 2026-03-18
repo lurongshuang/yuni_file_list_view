@@ -95,66 +95,6 @@ class _YDesktopGroupedGridViewState<T>
       marqueeFillColor: widget.marqueeFillColor,
       marqueeBorderColor: widget.marqueeBorderColor,
       marqueeBorderWidth: widget.marqueeBorderWidth,
-      customSelectionCalculator: (rectInContent) {
-        final Set<int> indices = {};
-        final box = context.findRenderObject() as RenderBox?;
-        if (box == null) return indices;
-
-        final double availableWidth =
-            box.size.width - widget.padding.left - widget.padding.right;
-
-        // 计算列数
-        int count = widget.crossAxisCount;
-        if (widget.maxCrossAxisExtent != null) {
-          count = (availableWidth /
-                  (widget.maxCrossAxisExtent! + widget.crossAxisSpacing))
-              .ceil();
-          count = count.clamp(1, 1000);
-        }
-
-        final double cellWidth =
-            (availableWidth - (count - 1) * widget.crossAxisSpacing) / count;
-        final double cellHeight = cellWidth / widget.childAspectRatio;
-
-        double currentY = widget.padding.top;
-        int globalItemIndex = 0;
-
-        for (final group in widget.groups) {
-          // 标题行不增加索引，但参与坐标计算
-          currentY += widget.groupHeaderHeight;
-
-          // 计算该组的宫格区域
-          final int rows = (group.items.length / count).ceil();
-          final double gridHeight = rows * cellWidth / widget.childAspectRatio +
-              (rows > 0 ? (rows - 1) * widget.mainAxisSpacing : 0);
-
-          final groupGridRect = Rect.fromLTWH(
-              widget.padding.left, currentY, availableWidth, gridHeight);
-
-          if (rectInContent.overlaps(groupGridRect)) {
-            // 如果框选区域与该组宫格区域有重叠，则细化计算
-            for (int i = 0; i < group.items.length; i++) {
-              final int row = i ~/ count;
-              final int col = i % count;
-
-              final double x = widget.padding.left +
-                  col * (cellWidth + widget.crossAxisSpacing);
-              final double y =
-                  currentY + row * (cellHeight + widget.mainAxisSpacing);
-              final itemRect = Rect.fromLTWH(x, y, cellWidth, cellHeight);
-
-              if (rectInContent.overlaps(itemRect)) {
-                indices.add(globalItemIndex + i);
-              }
-            }
-          }
-
-          globalItemIndex += group.items.length;
-          currentY += gridHeight + widget.mainAxisSpacing;
-        }
-
-        return indices;
-      },
       child: CustomScrollView(
         controller: widget.scrollController,
         slivers: [

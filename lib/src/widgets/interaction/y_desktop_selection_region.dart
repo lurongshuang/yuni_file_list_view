@@ -62,7 +62,10 @@ class _YDesktopSelectionRegionState extends State<YDesktopSelectionRegion>
   // 记录开始拖拽时的修饰键状态，决定是否是增量选择
   bool _isIncremental = false;
   Set<int> _initialSelection = {};
-  int? _startHitIndex;
+  
+  // 布局发现：记录每个索引对应的逻辑内容矩形 {index: RectInContent}
+  // 用于在滚动时维持选中状态，支持变高 item 和自定义 Header。
+  final Map<int, Rect> _discoveredContentRects = {};
 
   @override
   void initState() {
@@ -129,15 +132,13 @@ class _YDesktopSelectionRegionState extends State<YDesktopSelectionRegion>
       _initialSelection = {};
       widget.controller.clearSelection();
     }
-    _startHitIndex = null;
+    _discoveredContentRects.clear();
 
     setState(() {
       _dragStartGlobal = details.globalPosition;
       _dragCurrentGlobal = details.globalPosition;
       _initialScrollOffset = _scrollController?.offset ?? 0;
     });
-    
-    _startHitIndex = _findHitIndex(details.globalPosition);
 
     if (!_autoScrollTicker.isTicking) {
       _autoScrollTicker.start();
@@ -165,7 +166,7 @@ class _YDesktopSelectionRegionState extends State<YDesktopSelectionRegion>
       _dragCurrentGlobal = null;
       _initialScrollOffset = 0;
     });
-    _startHitIndex = null;
+    _discoveredContentRects.clear();
     if (_autoScrollTicker.isTicking) {
       _autoScrollTicker.stop();
     }
@@ -192,13 +193,9 @@ class _YDesktopSelectionRegionState extends State<YDesktopSelectionRegion>
       final Set<int> capturedIndices = widget.customSelectionCalculator!(rectInContent);
       _applyCapturedIndices(capturedIndices);
     } else {
-      // 模式 B：物理模式。回退到通过遍历渲染树寻找 MetaData。
-      // 计算当前在可视区域（Viewport）内的相对矩形
-      final rectInViewport = Rect.fromPoints(
-        startInContent.translate(0, -scrollOffset),
-        currentLocal,
-      );
-      _performPhysicalMarqueeSelection(rectInViewport);
+      // 模式 B：物理探知模式。通过实时学习渲染树中 item 的 contentRect 来实现框选。
+      // 它不需要预知 item 和 header 的高度。
+      _performPhysicalMarqueeSelection(rectInContent);
     }
   }
 
@@ -211,8 +208,9 @@ class _YDesktopSelectionRegionState extends State<YDesktopSelectionRegion>
     }
   }
 
-  void _performPhysicalMarqueeSelection(Rect marqueeRect) {
+  void _performPhysicalMarqueeSelection(Rect marqueeRectInContent) {
     final Set<int> capturedIndices = {};
+    final scrollOffset = _scrollController?.offset ?? 0;
     
     void visitor(Element element) {
       final renderObject = element.renderObject;
@@ -221,36 +219,32 @@ class _YDesktopSelectionRegionState extends State<YDesktopSelectionRegion>
         if (data != null) {
           final box = renderObject;
           final ancestor = context.findRenderObject() as RenderBox;
-          final localPos = box.localToGlobal(Offset.zero, ancestor: ancestor);
-          final boxRect = localPos & box.size;
           
-          if (marqueeRect.overlaps(boxRect)) {
-            capturedIndices.add(data.index);
-          }
+          // 获取当前 Item 在可视区域的位置
+          final localPos = box.localToGlobal(Offset.zero, ancestor: ancestor);
+          // 转换为内容坐标系下的位置：物理位置 + 当前滚动偏移
+          final itemRectInContent = localPos.translate(0, scrollOffset) & box.size;
+          
+          // 学习并缓存该 Item 的位置信息
+          _discoveredContentRects[data.index] = itemRectInContent;
         }
       }
       element.visitChildren(visitor);
     }
 
+    // 1. 遍历当前可见元素，发现/更新它们的逻辑坐标
     context.visitChildElements(visitor);
     
-    if (capturedIndices.isNotEmpty) {
-      final vMin = capturedIndices.reduce((a, b) => a < b ? a : b);
-      final vMax = capturedIndices.reduce((a, b) => a > b ? a : b);
-      
-      _startHitIndex ??= vMin; 
-      
-      final Set<int> finalIndices = {};
-      final rangeStart = _startHitIndex! < vMin ? _startHitIndex! : vMin;
-      final rangeEnd = _startHitIndex! > vMax ? _startHitIndex! : vMax;
-      
-      for (int i = rangeStart; i <= rangeEnd; i++) {
-        finalIndices.add(i);
+    // 2. 对所有已发现的 Item 进行基于内容坐标系的框选判定
+    // 这样即便 Item 滚出屏幕（不在渲染树中），只要我们的 marqueeRectInContent 还覆盖它的 contentRect，它就依然被选中。
+    // 如果 marqueeRectInContent 缩小，它也会被正确反选。
+    _discoveredContentRects.forEach((index, itemRect) {
+      if (marqueeRectInContent.overlaps(itemRect)) {
+        capturedIndices.add(index);
       }
-      _applyCapturedIndices(finalIndices);
-    } else {
-      _applyCapturedIndices({});
-    }
+    });
+
+    _applyCapturedIndices(capturedIndices);
   }
 
   YSelectionData? _getSelectionData(RenderBox box) {
