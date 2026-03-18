@@ -89,7 +89,7 @@ class __SimpleScrollbarDemoState extends State<_SimpleScrollbarDemo> {
     // 模拟从接口获取真实的普通长列表数据
     _items = DemoData.listItems;
   }
-  
+
   bool _thumbVisibility = false;
   double _fadeInMs = 100;
   double _fadeOutMs = 300;
@@ -419,11 +419,45 @@ class __FullScrollbarDemoState extends State<_FullScrollbarDemo> {
           ),
         );
       },
+      // 🔥 新增：演示自定义 Thumb 滑块的 Widget！
+      thumbBuilder: (context, thumbHeight, isDragging) {
+        return Container(
+          width: 20, // 这个宽度会被 style.thumbWidth 覆盖，建议使用 style 配置
+          height: thumbHeight,
+          decoration: BoxDecoration(
+            color: isDragging
+                ? Colors.deepPurple
+                : Colors.deepPurple.withValues(alpha: 0.45),
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: isDragging
+                ? [
+                    BoxShadow(
+                      color: Colors.deepPurple.withValues(alpha: 0.4),
+                      blurRadius: 6,
+                      spreadRadius: 1,
+                    )
+                  ]
+                : null,
+            border: Border.all(
+              color: isDragging
+                  ? Colors.white.withValues(alpha: 0.8)
+                  : Colors.transparent,
+              width: 1,
+            ),
+          ),
+          // 可以在滑块里加个小图标
+          child: isDragging && thumbHeight > 30
+              ? const Center(
+                  child: Icon(Icons.unfold_more_rounded,
+                      size: 14, color: Colors.white),
+                )
+              : null,
+        );
+      },
       style: YRulerScrollbarStyle(
-        thumbColor: Colors.deepPurple.withValues(alpha: 0.45),
-        thumbDraggingColor: Colors.deepPurple,
-        thumbWidth: 4,
-        thumbMinHeight: 24,
+        // 当使用了 thumbBuilder 时，这里的颜色配置将失效，但宽度配置依然有效
+        thumbWidth: 16, // 我们把宽度设大一点，以便容纳图标
+        thumbMinHeight: 40,
         showTrack: true,
         trackColor: Colors.grey.withValues(alpha: 0.06),
         trackBorderColor: Colors.grey.withValues(alpha: 0.15),
@@ -508,10 +542,12 @@ class _DivergedNodeScrollbarDemo extends StatefulWidget {
   const _DivergedNodeScrollbarDemo();
 
   @override
-  State<_DivergedNodeScrollbarDemo> createState() => __DivergedNodeScrollbarDemoState();
+  State<_DivergedNodeScrollbarDemo> createState() =>
+      __DivergedNodeScrollbarDemoState();
 }
 
-class __DivergedNodeScrollbarDemoState extends State<_DivergedNodeScrollbarDemo> {
+class __DivergedNodeScrollbarDemoState
+    extends State<_DivergedNodeScrollbarDemo> {
   final ScrollController _ctrl = ScrollController();
 
   late final List<YFileGroup<YFileItem>> _months;
@@ -520,7 +556,8 @@ class __DivergedNodeScrollbarDemoState extends State<_DivergedNodeScrollbarDemo>
   @override
   void initState() {
     super.initState();
-    _months = DemoData.getGroupsByDimension('month', items: DemoData.gridItems2);
+    _months =
+        DemoData.getGroupsByDimension('month', items: DemoData.gridItems2);
     _days = DemoData.getGroupsByDimension('day', items: DemoData.gridItems2);
   }
 
@@ -537,12 +574,27 @@ class __DivergedNodeScrollbarDemoState extends State<_DivergedNodeScrollbarDemo>
       // 尺子显示月级
       nodes: _months,
       scrollOffsetBuilder: (node, index) {
-        int absoluteIndex = 0;
-        for (int i = 0; i < index; i++) {
-          absoluteIndex += _months[i].count;
+        // 月份尺子的绝对偏移量计算：
+        // 关键点：这里的列表是按 "天" (days) 渲染的，不是按月！
+        // 列表里的 item 是 days 分组，所以 Header 数量等于之前的 days 组数，
+        // Item 数量等于之前所有的 item 总数。
+        // 所以我们必须从 _days 列表里累加，直到当前的 month
+        int absoluteItems = 0;
+        int absoluteDayHeaders = 0;
+
+        for (final dayGroup in _days) {
+          // 如果当前天级分组的年份和月份等于目标月份
+          // （在真实的业务模型中，应该用 DateTime 比较或者预先算好映射关系）
+          // 这里通过简单的字符串前缀匹配 (例如 '2023-10' 匹配 '2023-10-15')
+          if (dayGroup.groupTitle.startsWith(node.label)) {
+            break;
+          }
+          absoluteItems += dayGroup.count;
+          absoluteDayHeaders += 1;
         }
-        // 列表模式下高度 = 之前组的 items * 72 + 之前组的 headers * 40
-        return (absoluteIndex * 72) + (index * 40);
+
+        // 列表模式下高度 = 之前组的 items * 72 + 之前组的天级 headers * 40
+        return (absoluteItems * 72) + (absoluteDayHeaders * 40);
       },
       // 提示显示天级
       hintNodes: _days,
@@ -584,14 +636,18 @@ class __DivergedNodeScrollbarDemoState extends State<_DivergedNodeScrollbarDemo>
                 color: Colors.orange.shade50,
                 child: Text(
                   group.groupTitle,
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      fontSize: 14, fontWeight: FontWeight.bold),
                 ),
               );
             },
             itemBuilder: (context, group, item, groupIndex, itemIndex) {
-              return ListTile(
-                title: Text(item.name),
-                subtitle: Text('ID: ${item.id}'),
+              return SizedBox(
+                height: 72, // 确保这里的实际高度与计算的高度 (72) 完全一致
+                child: ListTile(
+                  title: Text(item.name),
+                  subtitle: Text('ID: ${item.id}'),
+                ),
               );
             },
           ),
