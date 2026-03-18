@@ -12,7 +12,7 @@ class YDesktopFileItem<T> extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onDoubleTap;
   final Function(bool isSecondary)? onPointerDown;
-  final double height;
+  final double? height;
   final EdgeInsets padding;
   final Color? selectedColor;
   final BorderRadius? borderRadius;
@@ -26,7 +26,7 @@ class YDesktopFileItem<T> extends StatelessWidget {
     this.onTap,
     this.onDoubleTap,
     this.onPointerDown,
-    this.height = 32.0,
+    this.height,
     this.padding = const EdgeInsets.symmetric(horizontal: 16),
     this.selectedColor,
     this.borderRadius,

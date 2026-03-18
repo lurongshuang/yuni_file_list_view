@@ -62,6 +62,7 @@ class _YDesktopSelectionRegionState extends State<YDesktopSelectionRegion>
   // 记录开始拖拽时的修饰键状态，决定是否是增量选择
   bool _isIncremental = false;
   Set<int> _initialSelection = {};
+  int? _startHitIndex;
 
   @override
   void initState() {
@@ -128,12 +129,15 @@ class _YDesktopSelectionRegionState extends State<YDesktopSelectionRegion>
       _initialSelection = {};
       widget.controller.clearSelection();
     }
+    _startHitIndex = null;
 
     setState(() {
       _dragStartGlobal = details.globalPosition;
       _dragCurrentGlobal = details.globalPosition;
       _initialScrollOffset = _scrollController?.offset ?? 0;
     });
+    
+    _startHitIndex = _findHitIndex(details.globalPosition);
 
     if (!_autoScrollTicker.isTicking) {
       _autoScrollTicker.start();
@@ -161,6 +165,7 @@ class _YDesktopSelectionRegionState extends State<YDesktopSelectionRegion>
       _dragCurrentGlobal = null;
       _initialScrollOffset = 0;
     });
+    _startHitIndex = null;
     if (_autoScrollTicker.isTicking) {
       _autoScrollTicker.stop();
     }
@@ -228,7 +233,24 @@ class _YDesktopSelectionRegionState extends State<YDesktopSelectionRegion>
     }
 
     context.visitChildElements(visitor);
-    _applyCapturedIndices(capturedIndices);
+    
+    if (capturedIndices.isNotEmpty) {
+      final vMin = capturedIndices.reduce((a, b) => a < b ? a : b);
+      final vMax = capturedIndices.reduce((a, b) => a > b ? a : b);
+      
+      _startHitIndex ??= vMin; 
+      
+      final Set<int> finalIndices = {};
+      final rangeStart = _startHitIndex! < vMin ? _startHitIndex! : vMin;
+      final rangeEnd = _startHitIndex! > vMax ? _startHitIndex! : vMax;
+      
+      for (int i = rangeStart; i <= rangeEnd; i++) {
+        finalIndices.add(i);
+      }
+      _applyCapturedIndices(finalIndices);
+    } else {
+      _applyCapturedIndices({});
+    }
   }
 
   YSelectionData? _getSelectionData(RenderBox box) {
@@ -239,6 +261,36 @@ class _YDesktopSelectionRegionState extends State<YDesktopSelectionRegion>
       }
     }
     return null;
+  }
+
+  int? _findHitIndex(Offset globalPos) {
+    final RenderBox? box = context.findRenderObject() as RenderBox?;
+    if (box == null) return null;
+    final localPos = box.globalToLocal(globalPos);
+
+    int? foundIndex;
+    void visitor(Element element) {
+      if (foundIndex != null) return;
+      final renderObject = element.renderObject;
+      if (renderObject is RenderBox) {
+        final data = _getSelectionData(renderObject);
+        if (data != null) {
+          final itemBox = renderObject;
+          final ancestor = context.findRenderObject() as RenderBox;
+          final pos = itemBox.localToGlobal(Offset.zero, ancestor: ancestor);
+          final rect = pos & itemBox.size;
+          if (rect.contains(localPos)) {
+            foundIndex = data.index;
+          }
+        }
+      }
+      if (foundIndex == null) {
+        element.visitChildren(visitor);
+      }
+    }
+
+    context.visitChildElements(visitor);
+    return foundIndex;
   }
 
   @override

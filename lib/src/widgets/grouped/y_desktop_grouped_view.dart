@@ -12,7 +12,7 @@ class YDesktopGroupedListView<T> extends StatefulWidget {
   final List<YDesktopColumn<T>> columns;
   final YDesktopSelectionController controller;
   final ScrollController? scrollController;
-  final double itemHeight;
+  final ScrollPhysics? physics;
   final double groupHeaderHeight;
   final Widget Function(BuildContext context, String title)? groupHeaderBuilder;
 
@@ -32,7 +32,7 @@ class YDesktopGroupedListView<T> extends StatefulWidget {
     required this.controller,
     this.itemBuilder,
     this.scrollController,
-    this.itemHeight = 32.0,
+    this.physics,
     this.groupHeaderHeight = 40.0,
     this.groupHeaderBuilder,
     this.enableClearSelectionOnTapBackground = true,
@@ -104,28 +104,9 @@ class _YDesktopGroupedListViewState<T> extends State<YDesktopGroupedListView<T>>
       marqueeFillColor: widget.marqueeFillColor,
       marqueeBorderColor: widget.marqueeBorderColor,
       marqueeBorderWidth: widget.marqueeBorderWidth,
-      customSelectionCalculator: (rectInContent) {
-        final Set<int> indices = {};
-        double currentY = 0;
-        int itemIndex = 0;
-
-        for (final entry in _flattenedItems) {
-          final double h = entry.isHeader ? widget.groupHeaderHeight : widget.itemHeight;
-          final itemRect = Rect.fromLTWH(0, currentY, 10000, h); // 假设宽度无限大覆盖全行
-
-          if (rectInContent.overlaps(itemRect) && !entry.isHeader) {
-            indices.add(itemIndex);
-          }
-
-          if (!entry.isHeader) {
-            itemIndex++;
-          }
-          currentY += h;
-        }
-        return indices;
-      },
       child: ListView.builder(
         controller: widget.scrollController,
+        physics: widget.physics,
         itemCount: _flattenedItems.length,
         itemBuilder: (context, index) {
           final entry = _flattenedItems[index];
@@ -172,7 +153,6 @@ class _YDesktopGroupedListViewState<T> extends State<YDesktopGroupedListView<T>>
             item: item,
             index: itemIndex,
             columns: widget.columns,
-            height: widget.itemHeight,
             selected: isSelected,
             selectedColor: widget.itemSelectedColor,
             borderRadius: widget.itemBorderRadius,
