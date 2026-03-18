@@ -11,19 +11,19 @@ class YDesktopGroupedGridView<T> extends StatefulWidget {
   final YDesktopSelectionController controller;
   final YDesktopGridItemBuilder<T> itemBuilder;
   final ScrollController? scrollController;
-  
+
   /// 宫格列数 (如果提供了 maxCrossAxisExtent，则失效)
   final int crossAxisCount;
 
   /// 最大列宽 (用于自动计算列数)
   final double? maxCrossAxisExtent;
-  
+
   /// 主轴间距
   final double mainAxisSpacing;
-  
+
   /// 交叉轴间距
   final double crossAxisSpacing;
-  
+
   /// Item 宽高比
   final double childAspectRatio;
 
@@ -49,7 +49,7 @@ class YDesktopGroupedGridView<T> extends StatefulWidget {
     this.childAspectRatio = 1.0,
     this.groupHeaderHeight = 40.0,
     this.groupHeaderBuilder,
-    this.padding = const EdgeInsets.all(16.0),
+    this.padding = const EdgeInsets.all(0),
     this.enableClearSelectionOnTapBackground = true,
     this.marqueeFillColor,
     this.marqueeBorderColor,
@@ -63,10 +63,12 @@ class YDesktopGroupedGridView<T> extends StatefulWidget {
   final double marqueeBorderWidth;
 
   @override
-  State<YDesktopGroupedGridView<T>> createState() => _YDesktopGroupedGridViewState<T>();
+  State<YDesktopGroupedGridView<T>> createState() =>
+      _YDesktopGroupedGridViewState<T>();
 }
 
-class _YDesktopGroupedGridViewState<T> extends State<YDesktopGroupedGridView<T>> {
+class _YDesktopGroupedGridViewState<T>
+    extends State<YDesktopGroupedGridView<T>> {
   @override
   void initState() {
     super.initState();
@@ -88,7 +90,8 @@ class _YDesktopGroupedGridViewState<T> extends State<YDesktopGroupedGridView<T>>
     return YDesktopSelectionRegion(
       controller: widget.controller,
       scrollController: widget.scrollController,
-      enableClearSelectionOnTapBackground: widget.enableClearSelectionOnTapBackground,
+      enableClearSelectionOnTapBackground:
+          widget.enableClearSelectionOnTapBackground,
       marqueeFillColor: widget.marqueeFillColor,
       marqueeBorderColor: widget.marqueeBorderColor,
       marqueeBorderWidth: widget.marqueeBorderWidth,
@@ -97,16 +100,20 @@ class _YDesktopGroupedGridViewState<T> extends State<YDesktopGroupedGridView<T>>
         final box = context.findRenderObject() as RenderBox?;
         if (box == null) return indices;
 
-        final double availableWidth = box.size.width - widget.padding.left - widget.padding.right;
-        
+        final double availableWidth =
+            box.size.width - widget.padding.left - widget.padding.right;
+
         // 计算列数
         int count = widget.crossAxisCount;
         if (widget.maxCrossAxisExtent != null) {
-          count = (availableWidth / (widget.maxCrossAxisExtent! + widget.crossAxisSpacing)).ceil();
-          count = count.clamp(1, 1000); 
+          count = (availableWidth /
+                  (widget.maxCrossAxisExtent! + widget.crossAxisSpacing))
+              .ceil();
+          count = count.clamp(1, 1000);
         }
 
-        final double cellWidth = (availableWidth - (count - 1) * widget.crossAxisSpacing) / count;
+        final double cellWidth =
+            (availableWidth - (count - 1) * widget.crossAxisSpacing) / count;
         final double cellHeight = cellWidth / widget.childAspectRatio;
 
         double currentY = widget.padding.top;
@@ -118,18 +125,22 @@ class _YDesktopGroupedGridViewState<T> extends State<YDesktopGroupedGridView<T>>
 
           // 计算该组的宫格区域
           final int rows = (group.items.length / count).ceil();
-          final double gridHeight = rows * cellWidth / widget.childAspectRatio + (rows > 0 ? (rows - 1) * widget.mainAxisSpacing : 0);
-          
-          final groupGridRect = Rect.fromLTWH(widget.padding.left, currentY, availableWidth, gridHeight);
-          
+          final double gridHeight = rows * cellWidth / widget.childAspectRatio +
+              (rows > 0 ? (rows - 1) * widget.mainAxisSpacing : 0);
+
+          final groupGridRect = Rect.fromLTWH(
+              widget.padding.left, currentY, availableWidth, gridHeight);
+
           if (rectInContent.overlaps(groupGridRect)) {
             // 如果框选区域与该组宫格区域有重叠，则细化计算
             for (int i = 0; i < group.items.length; i++) {
               final int row = i ~/ count;
               final int col = i % count;
-              
-              final double x = widget.padding.left + col * (cellWidth + widget.crossAxisSpacing);
-              final double y = currentY + row * (cellHeight + widget.mainAxisSpacing);
+
+              final double x = widget.padding.left +
+                  col * (cellWidth + widget.crossAxisSpacing);
+              final double y =
+                  currentY + row * (cellHeight + widget.mainAxisSpacing);
               final itemRect = Rect.fromLTWH(x, y, cellWidth, cellHeight);
 
               if (rectInContent.overlaps(itemRect)) {
@@ -137,7 +148,7 @@ class _YDesktopGroupedGridViewState<T> extends State<YDesktopGroupedGridView<T>>
               }
             }
           }
-          
+
           globalItemIndex += group.items.length;
           currentY += gridHeight + widget.mainAxisSpacing;
         }
@@ -150,20 +161,22 @@ class _YDesktopGroupedGridViewState<T> extends State<YDesktopGroupedGridView<T>>
           for (final group in widget.groups) ...[
             SliverToBoxAdapter(
               child: Padding(
-                padding: widget.padding.copyWith(top: 0, bottom: 0),
-                child: widget.groupHeaderBuilder?.call(context, group.groupTitle) ??
+                padding: widget.padding,
+                child: widget.groupHeaderBuilder
+                        ?.call(context, group.groupTitle) ??
                     Container(
                       height: widget.groupHeaderHeight,
                       alignment: Alignment.centerLeft,
                       child: Text(
                         group.groupTitle,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 16),
                       ),
                     ),
               ),
             ),
             SliverPadding(
-              padding: widget.padding.copyWith(top: 0),
+              padding: widget.padding,
               sliver: SliverGrid(
                 gridDelegate: widget.maxCrossAxisExtent != null
                     ? SliverGridDelegateWithMaxCrossAxisExtent(
@@ -182,19 +195,21 @@ class _YDesktopGroupedGridViewState<T> extends State<YDesktopGroupedGridView<T>>
                   (context, index) {
                     final item = group.items[index];
                     final globalIndex = _getGlobalIndex(group, index);
-                    final isSelected = widget.controller.isSelected(globalIndex);
-                    
+                    final isSelected =
+                        widget.controller.isSelected(globalIndex);
+
                     void triggerSelection({bool isSecondary = false}) {
-                      widget.controller.handleTap(globalIndex, isSecondary: isSecondary);
+                      widget.controller
+                          .handleTap(globalIndex, isSecondary: isSecondary);
                     }
 
                     return MetaData(
                       metaData: YSelectionData(index: globalIndex, extra: item),
                       behavior: HitTestBehavior.translucent,
                       child: widget.itemBuilder(
-                        context, 
-                        item, 
-                        globalIndex, 
+                        context,
+                        item,
+                        globalIndex,
                         isSelected,
                         triggerSelection,
                       ),

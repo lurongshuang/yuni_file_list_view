@@ -258,13 +258,12 @@ class __NodeScrollbarDemoState extends State<_NodeScrollbarDemo> {
       controller: _ctrl,
       // 真实业务中直接把原有的 Group 列表传入当成刻度节点！
       nodes: _yearNodes,
-      extentRatioBuilder: (node, index) {
-        // 由于是平铺列表，我们需要累加计算该年份第一条数据的绝对 Index，算出在大列表中的总进度！
+      scrollOffsetBuilder: (node, index) {
         int absoluteIndex = 0;
         for (int i = 0; i < index; i++) {
           absoluteIndex += _yearNodes[i].count;
         }
-        return absoluteIndex / _flatItems.length;
+        return absoluteIndex * _itemExtent;
       },
       style: YRulerScrollbarStyle(
         thumbColor: Colors.teal.withValues(alpha: 0.5),
@@ -328,16 +327,13 @@ class _FullScrollbarDemo extends StatefulWidget {
 class __FullScrollbarDemoState extends State<_FullScrollbarDemo> {
   final ScrollController _ctrl = ScrollController();
 
-  // 获取演示环境的真实二级列表数据 (如按月分组的照片列表)
   late final List<YFileGroup<YFileItem>> _months;
-  late final int _totalItems;
 
   @override
   void initState() {
     super.initState();
     _months =
         DemoData.getGroupsByDimension('month', items: DemoData.gridItems2);
-    _totalItems = _months.fold<int>(0, (sum, g) => sum + g.count);
   }
 
   @override
@@ -353,14 +349,13 @@ class __FullScrollbarDemoState extends State<_FullScrollbarDemo> {
       // 直接把真实的业务模型列表 _months 当做 nodes 传给组件
       // 因为 YFileGroup 已经在核心代码里实现了 YRulerScrollbarNode 接口
       nodes: _months,
-      extentRatioBuilder: (node, index) {
-        // 由于需要计算该组从头开始的绝对位置索引，方便的话也可以在业务构建时给 Group 带上 index 属性，
-        // 或者如本例：直接累加之前组的个数除以总数。这完全由业务方自由决定！
+      scrollOffsetBuilder: (node, index) {
         int absoluteIndex = 0;
         for (int i = 0; i < index; i++) {
           absoluteIndex += _months[i].count;
         }
-        return absoluteIndex / _totalItems;
+        // 列表模式下高度 = 之前组的 items * 72 + 之前组的 headers * 44
+        return (absoluteIndex * 72) + (index * 44);
       },
       onHintChanged: (node) {
         // 🔥 交互升级：当提示文本切换时切换触发触感反馈
@@ -521,14 +516,12 @@ class __DivergedNodeScrollbarDemoState extends State<_DivergedNodeScrollbarDemo>
 
   late final List<YFileGroup<YFileItem>> _months;
   late final List<YFileGroup<YFileItem>> _days;
-  late final int _totalItems;
 
   @override
   void initState() {
     super.initState();
     _months = DemoData.getGroupsByDimension('month', items: DemoData.gridItems2);
     _days = DemoData.getGroupsByDimension('day', items: DemoData.gridItems2);
-    _totalItems = _months.fold<int>(0, (sum, g) => sum + g.count);
   }
 
   @override
@@ -543,21 +536,22 @@ class __DivergedNodeScrollbarDemoState extends State<_DivergedNodeScrollbarDemo>
       controller: _ctrl,
       // 尺子显示月级
       nodes: _months,
-      extentRatioBuilder: (node, index) {
+      scrollOffsetBuilder: (node, index) {
         int absoluteIndex = 0;
         for (int i = 0; i < index; i++) {
           absoluteIndex += _months[i].count;
         }
-        return absoluteIndex / _totalItems;
+        // 列表模式下高度 = 之前组的 items * 72 + 之前组的 headers * 40
+        return (absoluteIndex * 72) + (index * 40);
       },
       // 提示显示天级
       hintNodes: _days,
-      hintExtentRatioBuilder: (node, index) {
+      hintScrollOffsetBuilder: (node, index) {
         int absoluteIndex = 0;
         for (int i = 0; i < index; i++) {
           absoluteIndex += _days[i].count;
         }
-        return absoluteIndex / _totalItems;
+        return (absoluteIndex * 72) + (index * 40);
       },
       showHintOnDrag: true,
       style: YRulerScrollbarStyle(

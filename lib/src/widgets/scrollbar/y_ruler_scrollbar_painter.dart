@@ -22,6 +22,7 @@ class YRulerScrollbarPainter extends ChangeNotifier
     double tickOpacity = 0.0,
     double thumbOpacity = 1.0,
     this.extentRatioBuilder,
+    this.scrollOffsetBuilder,
     this.hasCustomNodeLabelBuilder = false,
   })  : _scrollOffset = scrollOffset,
         _maxScrollExtent = maxScrollExtent,
@@ -39,9 +40,11 @@ class YRulerScrollbarPainter extends ChangeNotifier
   List<YRulerScrollbarNode> _nodes;
   YRulerScrollbarStyle _style;
 
-  /// 用于动态获取 node 位置比例的回调
-  /// 范围 0.0 ~ 1.0
-  final double Function(YRulerScrollbarNode node, int index)? extentRatioBuilder;
+  /// 用于动态获取 node 位置比例的回调 (0.0 ~ 1.0)
+  double Function(YRulerScrollbarNode node, int index)? extentRatioBuilder;
+
+  /// 用于动态获取 node 绝对偏移量的回调 (pixels)
+  double Function(YRulerScrollbarNode node, int index)? scrollOffsetBuilder;
 
   /// 是否启用了外部自定义的节点组件。如果启用，Painter 就不再绘制文字。
   bool hasCustomNodeLabelBuilder;
@@ -52,6 +55,8 @@ class YRulerScrollbarPainter extends ChangeNotifier
 
   /// 滑块不透明度
   double _thumbOpacity;
+
+  /// 视口对齐偏移量 (V4 中由外部 Snapper 处理，此处不再需要)
 
   // ─── setters，外部更新后调用 notifyListeners ─────────────────────────────
 
@@ -116,12 +121,73 @@ class YRulerScrollbarPainter extends ChangeNotifier
           : _style.thumbMaxHeight,
     );
 
-    final usable = trackHeight - thumbH;
-    final thumbTop = usable > 0
-        ? usable * (_scrollOffset / _maxScrollExtent).clamp(0.0, 1.0)
-        : 0.0;
+    // 在 V3 中，thumbTop 的计算采用分段映射
+    final yRatio = _offsetToYRatio(_scrollOffset);
+    final thumbTop = (trackHeight - thumbH) * yRatio;
 
     return (top: thumbTop, height: thumbH);
+  }
+
+  /// 计算给定 offset 对应的视觉比例 (0~1)
+  double _offsetToYRatio(double offset) {
+    if (_maxScrollExtent <= 0) return 0;
+    if (_nodes.isEmpty) return (offset / _maxScrollExtent).clamp(0.0, 1.0);
+
+    // 2. 处理首个节点前的区间 [0, o0]
+    final o0 = _nodeToActualOffset(0);
+    final r0 = _getNodeRatio(0);
+    if (offset < o0) {
+      if (o0 <= 0) return r0;
+      return (offset / o0) * r0;
+    }
+
+    // 3. 处理最后一个节点后的区间 [olast, MaxExtent]
+    final oLast = _nodeToActualOffset(_nodes.length - 1);
+    final rLast = _getNodeRatio(_nodes.length - 1);
+    if (offset > oLast) {
+      if (oLast >= _maxScrollExtent) return rLast;
+      final segmentRatio = (offset - oLast) / (_maxScrollExtent - oLast);
+      return rLast + segmentRatio * (1.0 - rLast);
+    }
+
+    // 4. 找到 offset 落在哪个像素区间 [oStart, oEnd]
+    int i = 0;
+    while (i < _nodes.length - 1) {
+      final oNext = _nodeToActualOffset(i + 1);
+      if (offset <= oNext) break;
+      i++;
+    }
+
+    // 5. 计算分段比例
+    final oStart = _nodeToActualOffset(i);
+    final oEnd = _nodeToActualOffset(i + 1 == _nodes.length ? i : i + 1);
+    final rStart = _getNodeRatio(i);
+    final rEnd = _getNodeRatio(i + 1 == _nodes.length ? i : i + 1);
+
+    if (oEnd == oStart) return rStart;
+
+    final segmentRatio = (offset - oStart) / (oEnd - oStart);
+    return (rStart + segmentRatio * (rEnd - rStart)).clamp(0.0, 1.0);
+  }
+
+  double _nodeToActualOffset(int index) {
+    if (index < 0 || index >= _nodes.length) return 0;
+    if (scrollOffsetBuilder != null) {
+      return scrollOffsetBuilder!(_nodes[index], index);
+    }
+    return extentRatioBuilder?.call(_nodes[index], index) ??
+        (_nodes.length > 1 ? index / (_nodes.length - 1) : 0) * _maxScrollExtent;
+  }
+
+  double _getNodeRatio(int index) {
+    if (_nodes.isEmpty) return 0.0;
+    if (extentRatioBuilder != null) {
+      return extentRatioBuilder!(_nodes[index], index).clamp(0.0, 1.0);
+    }
+    if (_nodes.length > 1) {
+      return index / (_nodes.length - 1);
+    }
+    return 0.0;
   }
 
   /// 将节点的 scrollOffset 映射到轨道上的 Y 坐标（对应 thumb 中心位置）
@@ -142,7 +208,7 @@ class YRulerScrollbarPainter extends ChangeNotifier
         (size.height - _style.padding.vertical).clamp(0.0, size.height);
 
     // 0. 绘制整体热区背景（用于调试或特定 UI 需求）
-    if (_style.hitTestBackgroundColor.alpha > 0) {
+    if (_style.hitTestBackgroundColor.a > 0) {
       canvas.drawRect(
         Offset.zero & size,
         Paint()..color = _style.hitTestBackgroundColor,
@@ -182,8 +248,8 @@ class YRulerScrollbarPainter extends ChangeNotifier
     // 2. 刻度线（受 tickOpacity 控制，opacity=0 时跳过绘制节省性能）
     if (_nodes.isNotEmpty && _tickOpacity > 0.001) {
       final baseTickColor = _style.tickColor;
-      final tickAlpha = (baseTickColor.alpha * _tickOpacity).toInt();
-      final tickColor = baseTickColor.withAlpha(tickAlpha);
+      final tickAlpha = (baseTickColor.a * _tickOpacity).clamp(0.0, 1.0);
+      final tickColor = baseTickColor.withValues(alpha: tickAlpha);
 
       final tickPaint = Paint()
         ..color = tickColor
@@ -194,7 +260,9 @@ class YRulerScrollbarPainter extends ChangeNotifier
         
         // 解析比例
         double ratio = 0.0;
-        if (extentRatioBuilder != null) {
+        if (scrollOffsetBuilder != null && _maxScrollExtent > 0) {
+          ratio = (scrollOffsetBuilder!(_nodes[i], i) / _maxScrollExtent).clamp(0.0, 1.0);
+        } else if (extentRatioBuilder != null) {
           ratio = extentRatioBuilder!(node, i).clamp(0.0, 1.0);
         } else if (_nodes.length > 1) {
           ratio = i / (_nodes.length - 1);
@@ -216,10 +284,9 @@ class YRulerScrollbarPainter extends ChangeNotifier
         // 标签（主节点才绘制，绘制在刻度线左侧）
         // 仅当没有自定义构建器，并且提供了样式时才绘制文字
         if (!hasCustomNodeLabelBuilder && _style.labelStyle != null && node.isMajor) {
-          final labelAlpha = (_tickOpacity * 255).clamp(0.0, 255.0).toInt();
           final labelStyle = _style.labelStyle!.copyWith(
             color: (_style.labelStyle!.color ?? const Color(0xFF000000))
-                .withAlpha(labelAlpha),
+                .withValues(alpha: _tickOpacity),
           );
           final tp = TextPainter(
             text: TextSpan(text: node.label, style: labelStyle),
@@ -241,8 +308,8 @@ class YRulerScrollbarPainter extends ChangeNotifier
 
     final baseThumbColor =
         _isDragging ? _style.thumbDraggingColor : _style.thumbColor;
-    final thumbAlpha = (baseThumbColor.alpha * _thumbOpacity).toInt();
-    final thumbColor = baseThumbColor.withAlpha(thumbAlpha);
+    final thumbAlpha = (baseThumbColor.a * _thumbOpacity).clamp(0.0, 1.0);
+    final thumbColor = baseThumbColor.withValues(alpha: thumbAlpha);
 
     final thumbRect = RRect.fromRectAndCorners(
       Rect.fromLTWH(

@@ -171,74 +171,96 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        top: false,
-        child: Stack(
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.grey.shade50, Colors.white],
-                ),
-              ),
-            ),
-            IndexedStack(
-              index: dimIndex,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth;
+          return SafeArea(
+            top: false,
+            child: Stack(
               children: [
-                _buildGalleryView(
-                    'year', 5, _yearScrollCtrl, _yearGroups, _yearOffsets),
-                _buildGalleryView(
-                    'month', 4, _monthScrollCtrl, _monthGroups, _monthOffsets),
-                _buildGalleryView(
-                    'day', 3, _dayScrollCtrl, _dayGroups, _dayOffsets),
-              ],
-            ),
-            Positioned(
-              bottom: 84,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(24),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                    child: Container(
-                      height: 52,
-                      width: 280,
-                      padding: const EdgeInsets.all(5),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.85),
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(
-                            color: Colors.black.withValues(alpha: 0.05),
-                            width: 0.5),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
-                            blurRadius: 25,
-                            offset: const Offset(0, 10),
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Colors.grey.shade50, Colors.white],
+                    ),
+                  ),
+                ),
+                IndexedStack(
+                  index: dimIndex,
+                  children: [
+                    _buildGalleryView('year', 5, _yearScrollCtrl, _yearGroups,
+                        _yearOffsets, width),
+                    _buildGalleryView('month', 4, _monthScrollCtrl,
+                        _monthGroups, _monthOffsets, width),
+                    _buildGalleryView('day', 3, _dayScrollCtrl, _dayGroups,
+                        _dayOffsets, width),
+                  ],
+                ),
+                Positioned(
+                  bottom: 84,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                        child: Container(
+                          height: 52,
+                          width: 280,
+                          padding: const EdgeInsets.all(5),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.85),
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(
+                                color: Colors.black.withValues(alpha: 0.05),
+                                width: 0.5),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.1),
+                                blurRadius: 25,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _buildDimensionBtn('年', 'year'),
-                          _buildDimensionBtn('月', 'month'),
-                          _buildDimensionBtn('日', 'day'),
-                        ],
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _buildDimensionBtn('年', 'year'),
+                              _buildDimensionBtn('月', 'month'),
+                              _buildDimensionBtn('日', 'day'),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
+  }
+
+  double _calcGroupPhysicalOffset(List<YFileGroup<YFileItem>> groups, int index, double width, int crossAxisCount) {
+    const headerH = 46.0;
+    const spacing = 8.0;
+    final rowH = _mode == YFileGroupedMode.grid
+        ? (width - spacing * (crossAxisCount - 1)) / crossAxisCount + spacing
+        : 72.0;
+
+    double offset = 0;
+    for (int i = 0; i < index; i++) {
+      final g = groups[i];
+      final rows = (g.count / crossAxisCount).ceil();
+      final contentH = _mode == YFileGroupedMode.grid ? (rows * rowH) : (g.count * 72.0);
+      offset += headerH + contentH;
+    }
+    return offset;
   }
 
   Widget _buildGalleryView(
@@ -247,6 +269,7 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
     ScrollController scrollCtrl,
     List<YFileGroup<YFileItem>> groups,
     List<int> groupOffsets,
+    double width,
   ) {
     return YDragSelectRegion(
       scrollController: scrollCtrl,
@@ -263,8 +286,6 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
           }
         },
         enableDebugLog: true,
-        // 避开顶部 SliverAppBar 悬浮区域
-        // 极其舒爽的一键集成业务实体
         style: YRulerScrollbarStyle(
           thumbColor: Colors.blue.withValues(alpha: 0.5),
           thumbDraggingColor: Colors.blue,
@@ -273,29 +294,7 @@ class _PhotoGalleryDemoPageState extends State<PhotoGalleryDemoPage> {
           thumbMaxHeight: 50,
           showTrack: false,
         ),
-        extentRatioBuilder: (node, index) {
-          // 每个 Group 的高度 = Header (46) + Items (crossAxisCount 相关)
-          // 这里做一个估算的物理高度比例，比单纯用 item count 更准
-          double currentPhysicalOffset = 0;
-          for (int i = 0; i < index; i++) {
-            final g = groups[i];
-            const headerH = 46.0;
-            // 简单估算：grid 下每行高度约等于宽度，这里假设一个固定比例或使用固定高度
-            final rows = (g.count / crossAxisCount).ceil();
-            final rowH = _mode == YFileGroupedMode.grid ? 100.0 : 72.0; // 这里的 100 是估算的 grid item 高
-            currentPhysicalOffset += headerH + (rows * rowH);
-          }
-
-          double totalPhysicalHeight = 0;
-          for (var g in groups) {
-            const headerH = 46.0;
-            final rows = (g.count / crossAxisCount).ceil();
-            final rowH = _mode == YFileGroupedMode.grid ? 100.0 : 72.0;
-            totalPhysicalHeight += headerH + (rows * rowH);
-          }
-
-          return totalPhysicalHeight == 0 ? 0.0 : (currentPhysicalOffset / totalPhysicalHeight).clamp(0.0, 1.0);
-        },
+        scrollOffsetBuilder: (node, index) => _calcGroupPhysicalOffset(groups, index, width, crossAxisCount),
         nodeLabelBuilder: (context, node, index) {
           if (!node.isMajor) return const SizedBox.shrink();
           return Container(
